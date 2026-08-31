@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sethu Cost Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#f4f2eb;
+    --surface:#fffdf8;
+    --surface-2:#ece8dd;
+    --ink:#221f1b;
+    --ink-soft:#6d675c;
+    --line:#e1dccd;
+    --accent:#2c4a63;
+    --accent-soft:#dbe4e9;
+    --accent-2:#a6763a;
+    --accent-2-soft:#f0e2cc;
+    --good:#3f6b4c;
+    --shadow: 0 1px 2px rgba(34,31,27,0.04), 0 8px 24px -16px rgba(34,31,27,0.25);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#181715;
+      --surface:#221f1c;
+      --surface-2:#2a2723;
+      --ink:#ece6da;
+      --ink-soft:#a89f91;
+      --line:#3a352e;
+      --accent:#8fb3cf;
+      --accent-soft:#28394a;
+      --accent-2:#dba85f;
+      --accent-2-soft:#3b3020;
+      --good:#7fb391;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -18px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#181715;
+    --surface:#221f1c;
+    --surface-2:#2a2723;
+    --ink:#ece6da;
+    --ink-soft:#a89f91;
+    --line:#3a352e;
+    --accent:#8fb3cf;
+    --accent-soft:#28394a;
+    --accent-2:#dba85f;
+    --accent-2-soft:#3b3020;
+    --good:#7fb391;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -18px rgba(0,0,0,0.6);
+  }
+
+  *{ box-sizing:border-box; }
+  html, body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{ max-width:100%; }
+  .page{ max-width:1180px; margin:0 auto; padding:2.75rem 1.5rem 5rem; }
+
+  header{ display:flex; flex-wrap:wrap; gap:1.5rem; justify-content:space-between; align-items:flex-end; margin-bottom:2.25rem; border-bottom:1px solid var(--line); padding-bottom:1.5rem; }
+  .brand-eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:0.72rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent-2); margin:0 0 0.4rem; }
+  h1{ font-family:'Fraunces', serif; font-weight:600; font-size:clamp(1.7rem,3vw,2.3rem); margin:0; text-wrap:balance; letter-spacing:-0.01em; }
+  header p{ margin:0.4rem 0 0; color:var(--ink-soft); font-size:0.92rem; max-width:34rem; }
+  .sheet-tag{ font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--ink-soft); background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:0.35rem 0.85rem; white-space:nowrap; }
+
+  .layout{ display:grid; grid-template-columns: 1.35fr 1fr; gap:1.75rem; align-items:start; }
+  @media (max-width: 900px){ .layout{ grid-template-columns:1fr; } .summary{ position:static; } }
+
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:1.4rem 1.5rem; }
+  .form-stack > .card + .card{ margin-top:1.25rem; }
+
+  .section-eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent); margin:0 0 0.9rem; display:flex; align-items:center; gap:0.5rem; }
+  .section-eyebrow::after{ content:""; flex:1; height:1px; background:var(--line); }
+
+  label{ font-size:0.82rem; color:var(--ink-soft); display:block; margin-bottom:0.3rem; }
+  select, input[type="number"], input[type="text"]{
+    width:100%; font:inherit; font-family:'IBM Plex Sans', sans-serif; font-size:0.95rem;
+    background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:7px;
+    padding:0.5rem 0.65rem;
+  }
+  select:focus, input:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .field-row.cols-3{ grid-template-columns:1fr 1fr 1fr; }
+  .field-row + .field-row{ margin-top:0.9rem; }
+  .field{ min-width:0; }
+
+  .radio-group{ display:flex; gap:0.6rem; flex-wrap:wrap; }
+  .radio-pill{ flex:1; min-width:9rem; }
+  .radio-pill input{ position:absolute; opacity:0; pointer-events:none; }
+  .radio-pill span{
+    display:block; text-align:center; border:1px solid var(--line); border-radius:8px;
+    padding:0.55rem 0.6rem; font-size:0.88rem; color:var(--ink-soft); cursor:pointer; user-select:none;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .radio-pill input:checked + span{ border-color:var(--accent); color:var(--accent); background:var(--accent-soft); font-weight:500; }
+  .radio-pill input:focus-visible + span{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  .qty-list{ display:flex; flex-direction:column; gap:0.55rem; max-height:15.5rem; overflow-y:auto; padding-right:0.3rem; margin-top:0.2rem; }
+  .qty-row{ display:grid; grid-template-columns:1fr 5.5rem; gap:0.75rem; align-items:center; }
+  .qty-row .name{ font-size:0.88rem; }
+  .qty-row .name small{ display:block; color:var(--ink-soft); font-size:0.74rem; font-family:'IBM Plex Mono',monospace; }
+  .qty-row input{ text-align:right; font-family:'IBM Plex Mono', monospace; padding:0.4rem 0.5rem; }
+
+  .note{ font-size:0.78rem; color:var(--ink-soft); margin-top:0.85rem; padding-top:0.75rem; border-top:1px dashed var(--line); line-height:1.5; }
+  .note b{ color:var(--accent-2); font-family:'IBM Plex Mono', monospace; font-weight:600; }
+
+  .checkbox-row{ display:flex; align-items:center; gap:0.55rem; padding:0.3rem 0; }
+  .checkbox-row input{ width:1rem; height:1rem; accent-color:var(--accent); }
+  .checkbox-row label{ margin:0; color:var(--ink); font-size:0.9rem; }
+
+  .margin-input-wrap{ display:flex; align-items:stretch; gap:0.6rem; }
+  .margin-input-wrap input{ flex:1; }
+  .reset-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:0.72rem; letter-spacing:0.03em;
+    background:var(--surface-2); border:1px solid var(--line); color:var(--ink-soft);
+    border-radius:7px; padding:0 0.8rem; cursor:pointer; white-space:nowrap;
+  }
+  .reset-btn:hover{ color:var(--accent); border-color:var(--accent); }
+
+  .summary{ position:sticky; top:1.75rem; }
+  .ledger-row{ display:flex; justify-content:space-between; gap:1rem; padding:0.42rem 0; font-size:0.9rem; }
+  .ledger-row .amt{ font-family:'IBM Plex Mono', monospace; font-variant-numeric:tabular-nums; color:var(--ink); }
+  .ledger-row.dim .label, .ledger-row.dim .amt{ color:var(--ink-soft); }
+  .ledger-divider{ height:1px; background:var(--line); margin:0.6rem 0; }
+  .ledger-total{ display:flex; justify-content:space-between; align-items:baseline; padding:0.3rem 0 0.1rem; font-weight:600; }
+  .ledger-total .amt{ font-family:'IBM Plex Mono', monospace; font-variant-numeric:tabular-nums; }
+
+  .margin-line{ display:flex; justify-content:space-between; align-items:center; margin:1rem 0 0.2rem; font-size:0.85rem; color:var(--ink-soft); }
+  .margin-line b{ color:var(--accent-2); font-family:'IBM Plex Mono', monospace; }
+
+  .retail-block{ margin-top:1rem; padding:1.1rem 1.2rem; background:var(--accent-2-soft); border:1px solid var(--accent-2); border-radius:10px; }
+  .retail-block .label{ font-family:'IBM Plex Mono', monospace; font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent-2); margin-bottom:0.35rem; }
+  .retail-block .price{ font-family:'Fraunces', serif; font-weight:600; font-size:2.1rem; letter-spacing:-0.01em; }
+  .retail-block .sub{ font-size:0.78rem; color:var(--ink-soft); margin-top:0.3rem; }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:8px; }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header>
+    <div>
+      <p class="brand-eyebrow">Sethu &middot; batik costing</p>
+      <h1>Product Cost Calculator</h1>
+      <p>Pulls unit prices straight from the Sethu cost sheet — pick a material, log what a piece actually used, and get a costed retail price.</p>
+    </div>
+    <span class="sheet-tag">rates as of Aug 2026</span>
+  </header>
+
+  <div class="layout">
+    <div class="form-stack">
+
+      <div class="card">
+        <p class="section-eyebrow">Material &amp; fabric</p>
+        <div class="field-row cols-3">
+          <div class="field">
+            <label for="material">Material</label>
+            <select id="material">
+              <option value="Super Voil">Super Voil — Rs 425/m</option>
+              <option value="Modal Silk">Modal Silk — Rs 1,000/m</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="length">Fabric used (metres)</label>
+            <input type="number" id="length" min="0" step="0.1" value="2">
+          </div>
+          <div class="field">
+            <label for="batchSize">Production batch size (m)</label>
+            <input type="number" id="batchSize" min="1" step="0.5" value="9">
+          </div>
+        </div>
+        <p class="note">Gas, water, wax top‑up and chemicals below are all set as a flat cost for one production batch, then scaled down by fabric used ÷ batch size — so you set them once and this piece just gets its share.</p>
+      </div>
+
+      <div class="card">
+        <p class="section-eyebrow">Coloring style <span style="font-weight:400; text-transform:none; letter-spacing:0;">— a piece can use either or both</span></p>
+        <div class="checkbox-row"><input type="checkbox" id="styleWater" checked><label for="styleWater">Water bath</label></div>
+        <div class="checkbox-row"><input type="checkbox" id="styleJava"><label for="styleJava">Java style</label></div>
+        <div id="javaQtyWrap" style="margin-top:0.9rem; display:none;">
+          <label for="javaQty">Sodium silicate used (litres) — Rs 500/L</label>
+          <input type="number" id="javaQty" min="0" step="0.1" value="0.2">
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="section-eyebrow">Dyes used <span style="font-weight:400; text-transform:none; letter-spacing:0;">— qty in 100&nbsp;mg units, per sheet</span></p>
+        <div class="qty-list" id="dyeList"></div>
+      </div>
+
+      <div class="card">
+        <p class="section-eyebrow">Wax &amp; chemicals</p>
+        <div class="field-row">
+          <div class="field">
+            <label for="waxTopUp">Wax top‑up <span id="waxFor"></span> (Rs / batch)</label>
+            <div class="margin-input-wrap">
+              <input type="number" id="waxTopUp" min="0" step="5" value="230">
+              <button class="reset-btn" id="resetWax" type="button">suggested</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="chemAllowance">Chemicals — soaping, acetic, fixing, salt, soda (Rs / batch)</label>
+            <input type="number" id="chemAllowance" min="0" step="5" value="700">
+          </div>
+        </div>
+        <p class="note">Wax is mostly recovered and reused, so this is just the small amount you top up each batch, not a full kilo. The chemicals are the ones people usually eyeball rather than weigh — set one flat "good enough" number for a typical batch here instead of logging every splash, and only revisit it every so often. The most reliable way to set both: take what you actually spend restocking wax and chemicals in a month and divide by how many batches you ran.</p>
+      </div>
+
+      <div class="card">
+        <p class="section-eyebrow">Sewing design</p>
+        <div class="field">
+          <label for="design">Garment</label>
+          <select id="design">
+            <option value="none">None (fabric / uncut piece only)</option>
+            <option value="kaftan">Kaftan — Rs 600</option>
+            <option value="wrap around skirt">Wrap around skirt — Rs 375</option>
+            <option value="dress">Dress — Rs 1,000</option>
+            <option value="top">Top — Rs 650</option>
+            <option value="scarf">Scarf — Rs 125</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="section-eyebrow">Packaging</p>
+        <div class="checkbox-row"><input type="checkbox" id="pkgBag" checked><label for="pkgBag">Bag — Rs 175</label></div>
+        <div class="checkbox-row"><input type="checkbox" id="pkgLabel" checked><label for="pkgLabel">Clothing label — Rs 25</label></div>
+      </div>
+
+      <div class="card">
+        <p class="section-eyebrow">Utility (gas + water)</p>
+        <div class="field">
+          <label>Rate this gives, at the batch size set above</label>
+          <input type="text" id="utilRate" disabled>
+        </div>
+        <p class="note">Sheet prices gas (Rs 500) &amp; water (Rs 60) per production batch — scaled the same way as wax &amp; chemicals above. Equipment (junting, funnel, gloves, brush) is a one‑time tool cost, so it's left out of the per‑item price.</p>
+      </div>
+
+    </div>
+
+    <div class="summary">
+      <div class="card">
+        <p class="section-eyebrow">Cost breakdown</p>
+        <div id="ledger"></div>
+
+        <div class="margin-line">
+          <span id="marginLabel">Profit margin — markup over cost</span>
+        </div>
+        <div class="margin-input-wrap">
+          <input type="number" id="margin" min="0" step="1" value="80">
+          <button class="reset-btn" id="resetMargin" type="button">reset to sheet</button>
+        </div>
+        <p class="note" id="marginNote" style="margin-top:0.6rem; padding-top:0; border-top:none;"></p>
+
+        <div class="retail-block">
+          <p class="label">Suggested retail price</p>
+          <p class="price" id="retailPrice">Rs 0</p>
+          <p class="sub" id="retailSub"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const MATERIALS = { 'Super Voil': 425, 'Modal Silk': 1000 };
+  const DEFAULT_MARGIN = { 'Super Voil': 80, 'Modal Silk': 140 };
+
+  const DYES = [
+    ['Yellow 4GL', 500], ['Red 3BF', 350], ['Scarlet 2G', 1600], ['Yellow 3RF', 350],
+    ['Blue 2GF', 450], ['Red Purple', 490], ['Dark Red', 500], ['Rose 6B', 500],
+    ['Brill Blue', 1800], ['Black', 350], ['Navy Blue GG', 650], ['Yellow CD', 300],
+    ['Red CD', 370], ['Blue CD', 550], ['Orange F2R', 330], ['Green 4B', 480],
+    ['Brown', 320], ['Teal Blue G 266%', 380],
+  ];
+
+  // Wax is mostly recovered/reused, so this is a suggested per-batch top-up, not a full kg.
+  // Super Voil's blend includes bee wax (pricier), so its top-up defaults a bit higher.
+  // ~180g net wax per 9m batch (20g/m), Super Voil blended ~40% bee wax/60% paraffin, Modal Silk paraffin-only.
+  const DEFAULT_WAX_TOPUP = { 'Super Voil': 230, 'Modal Silk': 145 };
+  // Sodium sulfate ~300g, soaping ~400ml, coastic soda ~80g, acetic ~150ml, soaping(2nd) ~300ml, fixing ~250ml per 9m batch.
+  const DEFAULT_CHEM_ALLOWANCE = 700; // eyeballed, same for either material
+
+  const JAVA_PRICE = 500; // Sodium silicate, per L
+  const SEWING = { kaftan: 600, 'wrap around skirt': 375, dress: 1000, top: 650, scarf: 125 };
+  const PACKAGING = { bag: 175, label: 25 };
+  const UTILITY_PER_BATCH = 500 + 60; // gas + water
+
+  const fmt = n => 'Rs ' + Math.round(n).toLocaleString('en-US');
+
+  const dyeList = document.getElementById('dyeList');
+  DYES.forEach(([name, price], i) => {
+    const row = document.createElement('div');
+    row.className = 'qty-row';
+    row.innerHTML = `<div class="name">${name}<small>Rs ${price} / 100mg</small></div>
+      <input type="number" class="dye-qty" data-price="${price}" min="0" step="0.5" value="0">`;
+    dyeList.appendChild(row);
+  });
+
+  const waxFor = document.getElementById('waxFor');
+  const waxTopUp = document.getElementById('waxTopUp');
+  const chemAllowance = document.getElementById('chemAllowance');
+  const resetWaxBtn = document.getElementById('resetWax');
+
+  const materialSelect = document.getElementById('material');
+  const lengthInput = document.getElementById('length');
+  const styleWater = document.getElementById('styleWater');
+  const styleJava = document.getElementById('styleJava');
+  const javaQtyWrap = document.getElementById('javaQtyWrap');
+  const javaQty = document.getElementById('javaQty');
+  const designSelect = document.getElementById('design');
+  const pkgBag = document.getElementById('pkgBag');
+  const pkgLabel = document.getElementById('pkgLabel');
+  const batchSize = document.getElementById('batchSize');
+  const utilRate = document.getElementById('utilRate');
+  const marginInput = document.getElementById('margin');
+  const marginNote = document.getElementById('marginNote');
+  const resetMarginBtn = document.getElementById('resetMargin');
+  const ledger = document.getElementById('ledger');
+  const retailPrice = document.getElementById('retailPrice');
+  const retailSub = document.getElementById('retailSub');
+
+  dyeList.querySelectorAll('.dye-qty').forEach(el => el.addEventListener('input', calculate));
+  [materialSelect, lengthInput, javaQty, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp, chemAllowance]
+    .forEach(el => el.addEventListener('input', calculate));
+  styleJava.addEventListener('change', () => {
+    javaQtyWrap.style.display = styleJava.checked ? 'block' : 'none';
+    calculate();
+  });
+  styleWater.addEventListener('change', calculate);
+
+  materialSelect.addEventListener('change', () => {
+    marginInput.value = DEFAULT_MARGIN[materialSelect.value];
+    waxTopUp.value = DEFAULT_WAX_TOPUP[materialSelect.value];
+    waxFor.textContent = `(${materialSelect.value})`;
+    calculate();
+  });
+
+  resetMarginBtn.addEventListener('click', () => {
+    marginInput.value = DEFAULT_MARGIN[materialSelect.value];
+    calculate();
+  });
+
+  resetWaxBtn.addEventListener('click', () => {
+    waxTopUp.value = DEFAULT_WAX_TOPUP[materialSelect.value];
+    calculate();
+  });
+
+  function row(label, amount, dim){
+    return `<div class="ledger-row${dim ? ' dim' : ''}"><span class="label">${label}</span><span class="amt">${fmt(amount)}</span></div>`;
+  }
+
+  function calculate(){
+    const material = materialSelect.value;
+    const length = Math.max(0, parseFloat(lengthInput.value) || 0);
+    const materialCost = MATERIALS[material] * length;
+
+    let dyeCost = 0;
+    dyeList.querySelectorAll('.dye-qty').forEach(el => {
+      dyeCost += (parseFloat(el.value) || 0) * parseFloat(el.dataset.price);
+    });
+
+    const usesJava = styleJava.checked;
+    const usesWater = styleWater.checked;
+    const javaCost = usesJava ? (parseFloat(javaQty.value) || 0) * JAVA_PRICE : 0;
+    const styleLabel = usesWater && usesJava ? 'Water bath + Java'
+      : usesJava ? 'Java style' : usesWater ? 'Water bath' : 'No coloring style selected';
+
+    const batch = Math.max(1, parseFloat(batchSize.value) || 9);
+    const perMetreUtil = UTILITY_PER_BATCH / batch;
+    const utilCost = perMetreUtil * length;
+    utilRate.value = `Rs ${perMetreUtil.toFixed(1)} / m`;
+
+    const waxRate = (parseFloat(waxTopUp.value) || 0) / batch;
+    const chemRate = (parseFloat(chemAllowance.value) || 0) / batch;
+    const waxCost = waxRate * length;
+    const chemCost = chemRate * length;
+    const elementCost = waxCost + chemCost;
+
+    const sewingCost = designSelect.value === 'none' ? 0 : SEWING[designSelect.value];
+
+    let pkgCost = 0;
+    if (pkgBag.checked) pkgCost += PACKAGING.bag;
+    if (pkgLabel.checked) pkgCost += PACKAGING.label;
+
+    const totalCost = materialCost + dyeCost + elementCost + javaCost + utilCost + sewingCost + pkgCost;
+
+    let html = '';
+    html += row(`${material} (${length} m)`, materialCost);
+    html += row('Dyes', dyeCost);
+    html += row('Wax top‑up', waxCost, true);
+    html += row('Chemicals', chemCost, true);
+    if (usesJava) html += row('Java coloring (sodium silicate)', javaCost);
+    html += row(`Utility (gas + water)`, utilCost, true);
+    html += row(designSelect.value === 'none' ? 'Sewing (none)' : `Sewing — ${designSelect.value}`, sewingCost);
+    html += row('Packaging', pkgCost, true);
+    html += '<div class="ledger-divider"></div>';
+    html += `<div class="ledger-total"><span>Total cost</span><span class="amt">${fmt(totalCost)}</span></div>`;
+    ledger.innerHTML = html;
+
+    const margin = Math.max(0, parseFloat(marginInput.value) || 0);
+    const grossMargin = margin / (100 + margin) * 100;
+    const retail = totalCost * (1 + margin / 100);
+    const retailRounded = Math.round(retail / 10) * 10;
+    const profit = retail - totalCost;
+    const profitRounded = retailRounded - totalCost;
+
+    marginNote.innerHTML = `Profit: <b>${fmt(profit)}</b> (≈ ${grossMargin.toFixed(1)}% gross margin). Sheet default for ${material}: ${DEFAULT_MARGIN[material]}% markup.`;
+    retailPrice.textContent = fmt(retailRounded);
+    retailSub.textContent = `Exact: ${fmt(retail)} · cost ${fmt(totalCost)} + profit ${fmt(profitRounded)}`;
+  }
+
+  javaQtyWrap.style.display = 'none';
+  marginInput.value = DEFAULT_MARGIN[materialSelect.value];
+  waxTopUp.value = DEFAULT_WAX_TOPUP[materialSelect.value];
+  waxFor.textContent = `(${materialSelect.value})`;
+  calculate();
+</script>
+</body>
+</html>
