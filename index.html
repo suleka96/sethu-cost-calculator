@@ -201,7 +201,7 @@
           <div class="field">
             <label for="waxTopUp">Wax top‑up <span id="waxFor"></span> (Rs / batch)</label>
             <div class="margin-input-wrap">
-              <input type="number" id="waxTopUp" min="0" step="5" value="230">
+              <input type="number" id="waxTopUp" min="0" step="5" value="225">
               <button class="reset-btn" id="resetWax" type="button">suggested</button>
             </div>
           </div>
@@ -282,9 +282,9 @@
   ];
 
   // Wax is mostly recovered/reused, so this is a suggested per-batch top-up, not a full kg.
-  // Super Voil's blend includes bee wax (pricier), so its top-up defaults a bit higher.
-  // ~180g net wax per 9m batch (20g/m), Super Voil blended ~40% bee wax/60% paraffin, Modal Silk paraffin-only.
-  const DEFAULT_WAX_TOPUP = { 'Super Voil': 230, 'Modal Silk': 145 };
+  // ~180g net wax per 9m batch (20g/m). Super Voil's sheet lists a 3-part wax recipe
+  // (paraffin/bee wax/gum rosin, assumed ~50/35/15 split); Modal Silk's is paraffin-only.
+  const DEFAULT_WAX_TOPUP = { 'Super Voil': 225, 'Modal Silk': 145 };
   // Sodium sulfate ~300g, soaping ~400ml, coastic soda ~80g, acetic ~150ml, soaping(2nd) ~300ml, fixing ~250ml per 9m batch.
   const DEFAULT_CHEM_ALLOWANCE = 700; // eyeballed, same for either material
 
