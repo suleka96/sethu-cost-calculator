@@ -140,6 +140,30 @@
   ::-webkit-scrollbar{ width:8px; }
   ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:8px; }
 
+  .tabs{ display:flex; gap:0.25rem; margin-bottom:1.75rem; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .tab-btn{
+    font:inherit; font-family:'IBM Plex Mono', monospace; font-size:0.76rem; letter-spacing:0.04em;
+    text-transform:uppercase; background:none; border:none; color:var(--ink-soft);
+    padding:0.65rem 0.9rem; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px;
+    transition:color .15s, border-color .15s;
+  }
+  .tab-btn:hover{ color:var(--accent); }
+  .tab-btn.is-active{ color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+
+  .chart-table{ width:100%; border-collapse:collapse; font-size:0.78rem; margin-top:0.7rem; font-family:'IBM Plex Mono', monospace; }
+  .chart-table th, .chart-table td{ border:1px solid var(--line); padding:0.32rem 0.5rem; text-align:center; }
+  .chart-table th{ background:var(--surface-2); color:var(--ink-soft); font-weight:500; }
+  .chart-table tr.hl td{ background:var(--accent-soft); color:var(--accent); font-weight:600; }
+
+  .swatch-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(92px, 1fr)); gap:0.7rem; margin-top:0.2rem; }
+  .swatch{ border:1px solid var(--line); border-radius:9px; overflow:hidden; cursor:pointer; padding:0; background:var(--bg); font:inherit; text-align:left; transition:border-color .15s, box-shadow .15s; }
+  .swatch:hover{ border-color:var(--accent); }
+  .swatch:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .swatch.is-sel{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft); }
+  .swatch .chip{ display:block; height:60px; }
+  .swatch .cap{ display:block; padding:0.4rem 0.5rem; font-family:'IBM Plex Mono', monospace; font-size:0.7rem; line-height:1.35; color:var(--ink-soft); }
+  .swatch.is-sel .cap{ color:var(--accent); font-weight:600; }
+
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 </style>
 </head>
@@ -155,6 +179,12 @@
     <span class="sheet-tag">rates as of Aug 2026</span>
   </header>
 
+  <nav class="tabs">
+    <button type="button" class="tab-btn is-active" data-tab="cost">Product cost</button>
+    <button type="button" class="tab-btn" data-tab="dye">Dye bath recipe</button>
+  </nav>
+
+  <div id="tab-cost" class="tab-panel">
   <div class="layout">
     <div class="form-stack">
 
@@ -266,6 +296,70 @@
         </div>
       </div>
     </div>
+  </div>
+  </div>
+
+  <div id="tab-dye" class="tab-panel" hidden>
+  <div class="layout">
+    <div class="form-stack">
+
+      <div class="card">
+        <p class="section-eyebrow">Batch &amp; shade</p>
+        <div class="field-row cols-3">
+          <div class="field">
+            <label for="dbWeight">Fabric weight (g)</label>
+            <input type="number" id="dbWeight" min="0" step="1" value="100">
+          </div>
+          <div class="field">
+            <label for="dbYards">Super Voil (yards)</label>
+            <input type="number" id="dbYards" min="0" step="0.25" placeholder="× 71 g/yd">
+          </div>
+          <div class="field">
+            <label for="dbDepth">Depth of shade (%)</label>
+            <select id="dbDepth">
+              <option value="1">1% — pale</option>
+              <option value="2" selected>2%</option>
+              <option value="3">3%</option>
+              <option value="4">4%</option>
+              <option value="5">5%</option>
+              <option value="6">6% or deeper</option>
+            </select>
+          </div>
+        </div>
+        <table class="chart-table" id="dbChart">
+          <thead><tr><th>Depth %</th><th>Glauber salt</th><th>Caustic soda</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <p class="section-eyebrow">Shade <span style="font-weight:400; text-transform:none; letter-spacing:0;">— pick a colour, amounts scale to your cloth</span></p>
+        <div class="swatch-grid" id="dbSwatches"></div>
+        <p class="note">Colours are approximate on-screen samples. Each recipe's dye percentages are on weight of fabric (0.25% = 0.25 g per 100 g). Select one and the recipe panel gives the milligrams to weigh out for the fabric weight above.</p>
+      </div>
+
+      <div class="card">
+        <p class="section-eyebrow">Easy weighting — spoon guide</p>
+        <p class="note" style="margin-top:0; border-top:none; padding-top:0;">
+          <b>Caustic soda</b> — tablespoon 20 g &middot; teaspoon 10 g &middot; yogurt spoon 3 g<br>
+          <b>Glauber salt</b> — tablespoon 30 g &middot; teaspoon 10 g &middot; yogurt spoon 3 g<br>
+          <b>Dyes</b> — tablespoon 30 g (&frac12; 12 g) &middot; teaspoon 10 g (&frac12; 5 g) &middot; yogurt spoon 3 g<br>
+          <b>Sodium silicate</b> — yogurt cup full 160 g &middot; half 80 g
+        </p>
+      </div>
+
+    </div>
+
+    <div class="summary">
+      <div class="card">
+        <p class="section-eyebrow">Dye bath recipe</p>
+        <div id="dbLedger"></div>
+
+        <p class="section-eyebrow" style="margin-top:1.5rem;">After-treatment</p>
+        <div id="dbAfter"></div>
+      </div>
+    </div>
+  </div>
   </div>
 </div>
 
@@ -422,6 +516,151 @@
   waxTopUp.value = DEFAULT_WAX_TOPUP[materialSelect.value];
   waxFor.textContent = `(${materialSelect.value})`;
   calculate();
+
+  /* ===================== Dye bath recipe tab ===================== */
+  const SALT_CAUSTIC = {
+    1:{ salt:40, caustic:2 }, 2:{ salt:60, caustic:3 }, 3:{ salt:70, caustic:4 },
+    4:{ salt:80, caustic:4 }, 5:{ salt:90, caustic:5 }, 6:{ salt:100, caustic:5 },
+  };
+  const WATER_L_PER_100G = 3;          // 100 g cloth : 3 L water (sheet 1:30)
+  const SUPER_VOIL_G_PER_YARD = 71;    // 1 yd Super Voil ≈ 71 g
+  const ACETIC_G_PER_L = 0.75;         // neutralizing
+  const SOAP_G_PER_L = 1;              // Bilvitan DPS — soaping
+
+  // Shade recipes captured from the dye sample sheets.
+  // dyes: [name, % on weight of fabric]  (0.25% = 0.25 g per 100 g cloth)
+  // swatch: approximate on-screen colour.
+  const SHADE_RECIPES = [
+    { id:'03', label:'Light green', swatch:'#a9d6a0',
+      dyes:[ ['Intracron Yellow 4GL', 0.25], ['Intracron Turq Blue G 266%', 1.00] ] },
+    { id:'04', label:'Teal', swatch:'#1c8ca3',
+      dyes:[ ['Intracron Yellow 4GL', 0.26], ['Intracron Turq Blue G 266%', 2.40] ] },
+  ];
+
+  // grams per level spoon, from the Easy Weighting sheet
+  const SPOONS = { salt:{tb:30,ts:10,yo:3}, caustic:{tb:20,ts:10,yo:3}, dye:{tb:30,ts:10,yo:3} };
+  function spoons(grams, kind){
+    const T = SPOONS[kind];
+    if (grams >= T.tb) return (grams / T.tb).toFixed(1) + ' tbsp';
+    if (grams >= T.ts * 0.5) return (grams / T.ts).toFixed(1) + ' tsp';
+    return (grams / T.yo).toFixed(1) + ' yogurt-spoon';
+  }
+
+  const gfmt = n => {
+    if (n >= 1000) return (Math.round(n / 10) / 100).toLocaleString('en-US', { maximumFractionDigits:2 }) + ' kg';
+    if (n >= 100)  return Math.round(n).toLocaleString('en-US') + ' g';
+    if (n >= 1)    return (Math.round(n * 10) / 10).toLocaleString('en-US') + ' g';
+    return (Math.round(n * 100) / 100).toLocaleString('en-US') + ' g';
+  };
+  const mgAmt = mg => mg >= 1000
+    ? `${Math.round(mg).toLocaleString('en-US')} mg &middot; ${gfmt(mg / 1000)}`
+    : `${Math.round(mg).toLocaleString('en-US')} mg`;
+
+  function ledStr(label, amountStr, dim){
+    return `<div class="ledger-row${dim ? ' dim' : ''}"><span class="label">${label}</span><span class="amt">${amountStr}</span></div>`;
+  }
+
+  const dbWeight   = document.getElementById('dbWeight');
+  const dbYards    = document.getElementById('dbYards');
+  const dbDepth    = document.getElementById('dbDepth');
+  const dbChartBody = document.querySelector('#dbChart tbody');
+  const dbSwatches = document.getElementById('dbSwatches');
+  const dbLedger = document.getElementById('dbLedger');
+  const dbAfter = document.getElementById('dbAfter');
+
+  Object.entries(SALT_CAUSTIC).forEach(([d, v]) => {
+    const tr = document.createElement('tr');
+    tr.dataset.depth = d;
+    tr.innerHTML = `<td>${d === '6' ? '6 +' : d}</td><td>${v.salt} g/l</td><td>${v.caustic} g/l</td>`;
+    dbChartBody.appendChild(tr);
+  });
+
+  let selectedShade = null;
+  SHADE_RECIPES.forEach(r => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'swatch';
+    btn.dataset.id = r.id;
+    const recap = r.dyes.map(([n, p]) => `${n.replace(/^Intracron /, '')} ${p.toFixed(2)}%`).join('<br>');
+    btn.innerHTML = `<span class="chip" style="background:${r.swatch}"></span>
+      <span class="cap"><b>${r.id} · ${r.label}</b><br>${recap}</span>`;
+    btn.addEventListener('click', () => {
+      selectedShade = selectedShade === r.id ? null : r.id;
+      dbSwatches.querySelectorAll('.swatch').forEach(s => s.classList.toggle('is-sel', s.dataset.id === selectedShade));
+      calcDye();
+    });
+    dbSwatches.appendChild(btn);
+  });
+
+  function calcDye(){
+    const weight = Math.max(0, parseFloat(dbWeight.value) || 0);          // grams of cloth
+    const depth  = dbDepth.value;
+    const chart  = SALT_CAUSTIC[depth];
+    const water  = (weight / 100) * WATER_L_PER_100G;                     // litres of bath
+
+    const saltG    = chart.salt * water;
+    const causticG = chart.caustic * water;
+    const aceticG  = ACETIC_G_PER_L * water;
+    const soapG    = SOAP_G_PER_L * water;
+
+    dbChartBody.querySelectorAll('tr').forEach(tr => {
+      tr.classList.toggle('hl', tr.dataset.depth === depth);
+    });
+
+    let dyeRows = '';
+    const recipe = SHADE_RECIPES.find(r => r.id === selectedShade);
+    if (recipe && weight > 0) {
+      dyeRows += ledStr(`<b>Shade ${recipe.id} — ${recipe.label}</b>`, `for ${gfmt(weight)}`);
+      recipe.dyes.forEach(([name, pct]) => {
+        const mg = weight * pct * 10;                 // weight(g) × pct/100 × 1000
+        dyeRows += ledStr(`${name} — ${pct.toFixed(2)}%`, mgAmt(mg), true);
+      });
+    } else if (recipe) {
+      dyeRows = ledStr(`Shade ${recipe.id} — ${recipe.label}`, 'set a fabric weight', true);
+    } else {
+      dyeRows = ledStr('No shade selected', 'pick a colour', true);
+    }
+
+    const waterStr = water.toLocaleString('en-US', { maximumFractionDigits:2 });
+    let html = '';
+    html += ledStr('Water', `${waterStr} L`);
+    html += ledStr(`Glauber salt — ${chart.salt} g/l`, `${gfmt(saltG)} &middot; ≈ ${spoons(saltG, 'salt')}`);
+    html += ledStr(`Caustic soda — ${chart.caustic} g/l`, `${gfmt(causticG)} &middot; ≈ ${spoons(causticG, 'caustic')}`, true);
+    html += '<div class="ledger-divider"></div>';
+    html += dyeRows;
+    dbLedger.innerHTML = html;
+
+    let after = '';
+    after += ledStr('Acetic acid — neutralize · 0.75 g/l', gfmt(aceticG), true);
+    after += ledStr('Bilvitan DPS — soaping · 1 g/l', gfmt(soapG), true);
+    after += ledStr('Felotra FIX — fixing', 'per supplier dose', true);
+    dbAfter.innerHTML = after;
+  }
+
+  [dbWeight, dbDepth].forEach(el => el.addEventListener('input', calcDye));
+
+  // typing grams by hand clears the yards helper (programmatic .value changes don't fire 'input')
+  dbWeight.addEventListener('input', () => { dbYards.value = ''; });
+  dbYards.addEventListener('input', () => {
+    const y = parseFloat(dbYards.value);
+    if (y > 0) dbWeight.value = Math.round(y * SUPER_VOIL_G_PER_YARD);
+    calcDye();
+  });
+
+  /* ===================== Tab switching ===================== */
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabPanels = {
+    cost: document.getElementById('tab-cost'),
+    dye:  document.getElementById('tab-dye'),
+  };
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.toggle('is-active', b === btn));
+      Object.entries(tabPanels).forEach(([k, p]) => { p.hidden = k !== btn.dataset.tab; });
+    });
+  });
+
+  calcDye();
 </script>
 </body>
 </html>
