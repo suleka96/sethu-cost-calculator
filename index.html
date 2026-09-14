@@ -315,12 +315,17 @@
         <p class="section-eyebrow">Batch &amp; shade</p>
         <div class="field-row cols-3">
           <div class="field">
-            <label for="dbWeight">Fabric weight (g)</label>
-            <input type="number" id="dbWeight" min="0" step="1" value="100">
+            <label for="dbFabricType">Fabric type</label>
+            <select id="dbFabricType">
+              <option value="Super Voil">Super Voil</option>
+              <option value="Modal Silk">Modal Silk</option>
+              <option value="Rayon">Rayon</option>
+              <option value="Cotton">100% Cotton</option>
+            </select>
           </div>
           <div class="field">
-            <label for="dbYards">Super Voil (yards)</label>
-            <input type="number" id="dbYards" min="0" step="0.25" placeholder="× 71 g/yd">
+            <label for="dbYards">Fabric (yards)</label>
+            <input type="number" id="dbYards" min="0" step="0.25" value="3">
           </div>
           <div class="field">
             <label for="dbDepth">Depth of shade (%)</label>
@@ -334,6 +339,7 @@
             </select>
           </div>
         </div>
+        <p class="note">Fabric weight isn't typed in — it's worked out from the type and yards (<span id="dbGPerYard"></span>), shown at the top of the recipe panel.</p>
         <table class="chart-table" id="dbChart">
           <thead><tr><th>Depth %</th><th>Glauber salt</th><th>Caustic soda</th></tr></thead>
           <tbody></tbody>
@@ -538,7 +544,19 @@
     4:{ salt:80, caustic:4 }, 5:{ salt:90, caustic:5 }, 6:{ salt:100, caustic:5 },
   };
   const WATER_L_PER_100G = 3;          // 100 g cloth : 3 L water (sheet 1:30)
-  const SUPER_VOIL_G_PER_YARD = 71;    // 1 yd Super Voil ≈ 71 g
+
+  // Weight per yard, back-calculated from the swatch weigh-ins:
+  //  Super Voil: 1.5 yd = 125 g, 3 yd = 250 g (a 6 yd note read 600 g, out of line with
+  //    the other two — using the 83.3 g/yd the two agreeing points give; flag if that's off)
+  //  Modal Silk: 3 yd = 325 g, 6 yd = 650 g
+  //  Rayon:      3.5 yd = 350 g
+  //  Cotton:     2 yd = 300 g
+  const FABRIC_G_PER_YARD = {
+    'Super Voil': 250 / 3,
+    'Modal Silk': 650 / 6,
+    'Rayon': 350 / 3.5,
+    'Cotton': 300 / 2,
+  };
   const ACETIC_G_PER_L = 0.75;         // neutralizing
   const SOAP_G_PER_L = 1;              // Bilvitan DPS — soaping
 
@@ -575,9 +593,10 @@
     return `<div class="ledger-row${dim ? ' dim' : ''}"><span class="label">${label}</span><span class="amt">${amountStr}</span></div>`;
   }
 
-  const dbWeight   = document.getElementById('dbWeight');
+  const dbFabricType = document.getElementById('dbFabricType');
   const dbYards    = document.getElementById('dbYards');
   const dbDepth    = document.getElementById('dbDepth');
+  const dbGPerYard = document.getElementById('dbGPerYard');
   const dbChartBody = document.querySelector('#dbChart tbody');
   const dbSwatches = document.getElementById('dbSwatches');
   const dbLedger = document.getElementById('dbLedger');
@@ -608,7 +627,12 @@
   });
 
   function calcDye(){
-    const weight = Math.max(0, parseFloat(dbWeight.value) || 0);          // grams of cloth
+    const fabricType = dbFabricType.value;
+    const gPerYard = FABRIC_G_PER_YARD[fabricType];
+    const yards  = Math.max(0, parseFloat(dbYards.value) || 0);
+    const weight = yards * gPerYard;                                      // grams of cloth, derived
+    dbGPerYard.textContent = `${gPerYard.toFixed(1)} g/yd for ${fabricType}`;
+
     const depth  = dbDepth.value;
     const chart  = SALT_CAUSTIC[depth];
     const water  = (weight / 100) * WATER_L_PER_100G;                     // litres of bath
@@ -631,13 +655,14 @@
         dyeRows += ledStr(`${name} — ${pct.toFixed(2)}%`, mgAmt(mg), true);
       });
     } else if (recipe) {
-      dyeRows = ledStr(`Shade ${recipe.id} — ${recipe.label}`, 'set a fabric weight', true);
+      dyeRows = ledStr(`Shade ${recipe.id} — ${recipe.label}`, 'set the yards above', true);
     } else {
       dyeRows = ledStr('No shade selected', 'pick a colour', true);
     }
 
     const waterStr = water.toLocaleString('en-US', { maximumFractionDigits:2 });
     let html = '';
+    html += ledStr(`Fabric weight — ${fabricType}, ${yards} yd`, gfmt(weight));
     html += ledStr('Water', `${waterStr} L`);
     html += ledStr(`Glauber salt — ${chart.salt} g/l`, `${gfmt(saltG)} &middot; ≈ ${spoons(saltG, 'salt')}`);
     html += ledStr(`Caustic soda — ${chart.caustic} g/l`, `${gfmt(causticG)} &middot; ≈ ${spoons(causticG, 'caustic')}`, true);
@@ -652,15 +677,7 @@
     dbAfter.innerHTML = after;
   }
 
-  [dbWeight, dbDepth].forEach(el => el.addEventListener('input', calcDye));
-
-  // typing grams by hand clears the yards helper (programmatic .value changes don't fire 'input')
-  dbWeight.addEventListener('input', () => { dbYards.value = ''; });
-  dbYards.addEventListener('input', () => {
-    const y = parseFloat(dbYards.value);
-    if (y > 0) dbWeight.value = Math.round(y * SUPER_VOIL_G_PER_YARD);
-    calcDye();
-  });
+  [dbFabricType, dbYards, dbDepth].forEach(el => el.addEventListener('input', calcDye));
 
   /* ===================== Tab switching ===================== */
   const tabBtns = document.querySelectorAll('.tab-btn');
