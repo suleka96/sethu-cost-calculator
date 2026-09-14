@@ -164,6 +164,14 @@
   .swatch .cap{ display:block; padding:0.4rem 0.5rem; font-family:'IBM Plex Mono', monospace; font-size:0.7rem; line-height:1.35; color:var(--ink-soft); }
   .swatch.is-sel .cap{ color:var(--accent); font-weight:600; }
 
+  .cta-btn{
+    display:block; width:100%; margin-top:1.1rem; font:inherit; font-family:'IBM Plex Mono', monospace;
+    font-size:0.82rem; letter-spacing:0.03em; background:var(--accent); color:var(--surface);
+    border:none; border-radius:8px; padding:0.75rem 1rem; cursor:pointer; transition:opacity .15s;
+  }
+  .cta-btn:hover{ opacity:0.88; }
+  .cta-btn:disabled{ opacity:0.5; cursor:not-allowed; }
+
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 </style>
 </head>
@@ -181,7 +189,7 @@
 
   <nav class="tabs">
     <button type="button" class="tab-btn is-active" data-tab="cost">Product cost</button>
-    <button type="button" class="tab-btn" data-tab="dye">Dye bath recipe</button>
+    <button type="button" class="tab-btn" data-tab="dye">Calculate Recipe</button>
   </nav>
 
   <div id="tab-cost" class="tab-panel">
@@ -308,7 +316,22 @@
   </div>
 
   <div id="tab-dye" class="tab-panel" hidden>
-  <div class="layout">
+
+  <div class="card" style="margin-bottom:1.5rem;">
+    <p class="section-eyebrow">Dyeing method</p>
+    <div class="radio-group">
+      <label class="radio-pill">
+        <input type="radio" name="dbMode" id="dbModeWater" value="water" checked>
+        <span>Water bath</span>
+      </label>
+      <label class="radio-pill">
+        <input type="radio" name="dbMode" id="dbModeJava" value="java">
+        <span>Java batik</span>
+      </label>
+    </div>
+  </div>
+
+  <div id="dbWaterPanel" class="layout">
     <div class="form-stack">
 
       <div class="card">
@@ -357,8 +380,7 @@
         <p class="note" style="margin-top:0; border-top:none; padding-top:0;">
           <b>Caustic soda</b> — tablespoon 20 g &middot; teaspoon 10 g &middot; yogurt spoon 3 g<br>
           <b>Glauber salt</b> — tablespoon 30 g &middot; teaspoon 10 g &middot; yogurt spoon 3 g<br>
-          <b>Dyes</b> — tablespoon 30 g (&frac12; 12 g) &middot; teaspoon 10 g (&frac12; 5 g) &middot; yogurt spoon 3 g<br>
-          <b>Sodium silicate</b> — yogurt cup full 160 g &middot; half 80 g
+          <b>Dyes</b> — tablespoon 30 g (&frac12; 12 g) &middot; teaspoon 10 g (&frac12; 5 g) &middot; yogurt spoon 3 g
         </p>
       </div>
 
@@ -366,14 +388,27 @@
 
     <div class="summary">
       <div class="card">
-        <p class="section-eyebrow">Dye bath recipe</p>
+        <p class="section-eyebrow">Recipe</p>
         <div id="dbLedger"></div>
 
         <p class="section-eyebrow" style="margin-top:1.5rem;">After-treatment</p>
         <div id="dbAfter"></div>
+
+        <button type="button" class="cta-btn" id="dbAddToDesign">Add to design →</button>
+        <p class="note" id="dbAddToDesignNote" style="margin-top:0.6rem;"></p>
       </div>
     </div>
   </div>
+
+  <div id="dbJavaPanel" class="layout" hidden>
+    <div class="form-stack">
+      <div class="card">
+        <p class="section-eyebrow">Java batik</p>
+        <p class="note" style="margin-top:0; border-top:none; padding-top:0;">Recipe calculator for Java batik is coming soon.</p>
+      </div>
+    </div>
+  </div>
+
   </div>
 </div>
 
@@ -409,7 +444,7 @@
     const row = document.createElement('div');
     row.className = 'qty-row';
     row.innerHTML = `<div class="name">${name}<small>Rs ${price} / 100mg</small></div>
-      <input type="number" class="dye-qty" data-price="${price}" min="0" step="10" value="0">`;
+      <input type="number" class="dye-qty" data-name="${name}" data-price="${price}" min="0" step="10" value="0">`;
     dyeList.appendChild(row);
   });
 
@@ -538,7 +573,16 @@
   waxFor.textContent = `(${materialSelect.value})`;
   calculate();
 
-  /* ===================== Dye bath recipe tab ===================== */
+  /* ===================== Calculate Recipe tab ===================== */
+  const dbModeWater = document.getElementById('dbModeWater');
+  const dbModeJava = document.getElementById('dbModeJava');
+  const dbWaterPanel = document.getElementById('dbWaterPanel');
+  const dbJavaPanel = document.getElementById('dbJavaPanel');
+  document.querySelectorAll('input[name="dbMode"]').forEach(el => el.addEventListener('change', () => {
+    dbWaterPanel.hidden = !dbModeWater.checked;
+    dbJavaPanel.hidden = !dbModeJava.checked;
+  }));
+
   const SALT_CAUSTIC = {
     1:{ salt:40, caustic:2 }, 2:{ salt:60, caustic:3 }, 3:{ salt:70, caustic:4 },
     4:{ salt:80, caustic:4 }, 5:{ salt:90, caustic:5 }, 6:{ salt:100, caustic:5 },
@@ -675,9 +719,67 @@
     after += ledStr('Bilvitan DPS — soaping · 1 g/l', gfmt(soapG), true);
     after += ledStr('Felotra FIX — fixing', 'per supplier dose', true);
     dbAfter.innerHTML = after;
+
+    // Keep the last calculation around so "Add to design" can hand it to the Product Cost tab.
+    lastRecipe = {
+      fabricType, yards, weight,
+      dyes: recipe ? recipe.dyes.map(([name, pct]) => [name, weight * pct * 10]) : [], // mg
+    };
   }
 
   [dbFabricType, dbYards, dbDepth].forEach(el => el.addEventListener('input', calcDye));
+
+  // Matches a shade recipe's dye name to a Product Cost dye row — names carry an
+  // "Intracron " brand prefix and one known spelling difference (Turq/Teal).
+  function resolveDyeInput(recipeDyeName){
+    const clean = recipeDyeName.replace(/^Intracron\s+/i, '').trim().toLowerCase();
+    const candidates = [clean, clean.replace(/turq/, 'teal'), clean.replace(/teal/, 'turq')];
+    for (const c of candidates) {
+      const input = [...dyeList.querySelectorAll('.dye-qty')].find(el => el.dataset.name.toLowerCase() === c);
+      if (input) return input;
+    }
+    return null;
+  }
+
+  let lastRecipe = null;
+  const dbAddToDesign = document.getElementById('dbAddToDesign');
+  const dbAddToDesignNote = document.getElementById('dbAddToDesignNote');
+  dbAddToDesign.addEventListener('click', () => {
+    if (!lastRecipe || lastRecipe.yards <= 0) {
+      dbAddToDesignNote.textContent = 'Set the fabric type and yards above first.';
+      return;
+    }
+
+    const notes = [];
+
+    if (MATERIALS[lastRecipe.fabricType] != null) {
+      materialSelect.value = lastRecipe.fabricType;
+      materialSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      notes.push(`${lastRecipe.fabricType} isn't priced in Product Cost yet, so material was left as-is`);
+    }
+
+    lengthInput.value = lastRecipe.yards;
+    styleWater.checked = true;
+    styleJava.checked = false;
+    javaQtyWrap.style.display = 'none';
+
+    let matched = 0;
+    const unmatched = [];
+    lastRecipe.dyes.forEach(([name, mg]) => {
+      const input = resolveDyeInput(name);
+      if (input) { input.value = Math.round(mg); matched++; }
+      else unmatched.push(name);
+    });
+    if (unmatched.length) notes.push(`no Product Cost match for ${unmatched.join(', ')}`);
+
+    calculate();
+    tabBtns.forEach(b => b.classList.toggle('is-active', b.dataset.tab === 'cost'));
+    Object.entries(tabPanels).forEach(([k, p]) => { p.hidden = k !== 'cost'; });
+
+    const summary = `Sent to Product Cost: ${lastRecipe.fabricType}, ${lastRecipe.yards} yd${matched ? `, ${matched} dye${matched > 1 ? 's' : ''}` : ''}.`;
+    dbAddToDesignNote.textContent = notes.length ? `${summary} (${notes.join('; ')})` : summary;
+  });
 
   /* ===================== Tab switching ===================== */
   const tabBtns = document.querySelectorAll('.tab-btn');
