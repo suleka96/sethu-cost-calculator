@@ -194,16 +194,16 @@
           <div class="field">
             <label for="material">Material</label>
             <select id="material">
-              <option value="Super Voil">Super Voil — Rs 425/m</option>
-              <option value="Modal Silk">Modal Silk — Rs 1,000/m</option>
+              <option value="Super Voil">Super Voil — Rs 425/yd</option>
+              <option value="Modal Silk">Modal Silk — Rs 1,000/yd</option>
             </select>
           </div>
           <div class="field">
-            <label for="length">Fabric used (metres)</label>
+            <label for="length">Fabric used (yards)</label>
             <input type="number" id="length" min="0" step="0.1" value="2">
           </div>
           <div class="field">
-            <label for="batchSize">Batch size (m)</label>
+            <label for="batchSize">Batch size (yd)</label>
             <input type="number" id="batchSize" min="1" step="0.5" value="9">
           </div>
         </div>
@@ -217,12 +217,12 @@
         <div id="javaQtyWrap" style="margin-top:0.9rem; display:none;">
           <div class="field-row">
             <div class="field">
-              <label for="javaQty">Sodium silicate used (litres) — Rs 500/L</label>
-              <input type="number" id="javaQty" min="0" step="0.1" value="0.2">
+              <label for="javaQty">Sodium silicate used (ml) — Rs 500/L</label>
+              <input type="number" id="javaQty" min="0" step="10" value="200">
             </div>
             <div class="field">
-              <label for="javaUrea">Urea used (kg) — Rs 400/kg</label>
-              <input type="number" id="javaUrea" min="0" step="0.05" value="0">
+              <label for="javaUrea">Urea used (g) — Rs 400/kg</label>
+              <input type="number" id="javaUrea" min="0" step="5" value="0">
             </div>
           </div>
         </div>
@@ -248,7 +248,7 @@
             <input type="number" id="chemAllowance" min="0" step="5" value="700">
           </div>
         </div>
-        <p class="note">Wax: ~180g/batch (20g/m over a 9m batch) — Super Voil split ~50% paraffin / 35% bee wax / 15% gum rosin, Modal Silk paraffin‑only — at sheet prices. Chemicals: ~300g salt + 400ml soaping + 80g soda + 150ml acetic + 300ml soaping (2nd stage) + 250ml fixing per batch, also at sheet prices. Both are estimates — adjust either to match what you actually use.</p>
+        <p class="note">Wax: ~180g/batch (20g/yd over a 9yd batch) — Super Voil split ~50% paraffin / 35% bee wax / 15% gum rosin, Modal Silk paraffin‑only — at sheet prices. Chemicals: ~300g salt + 400ml soaping + 80g soda + 150ml acetic + 300ml soaping (2nd stage) + 250ml fixing per batch, also at sheet prices. Both are estimates — adjust either to match what you actually use.</p>
       </div>
 
       <div class="card">
@@ -384,14 +384,14 @@
   ];
 
   // Wax is mostly recovered/reused, so this is a suggested per-batch top-up, not a full kg.
-  // ~180g net wax per 9m batch (20g/m). Super Voil's sheet lists a 3-part wax recipe
+  // ~180g net wax per 9yd batch (20g/yd). Super Voil's sheet lists a 3-part wax recipe
   // (paraffin/bee wax/gum rosin, assumed ~50/35/15 split); Modal Silk's is paraffin-only.
   const DEFAULT_WAX_TOPUP = { 'Super Voil': 225, 'Modal Silk': 145 };
-  // Sodium sulfate ~300g, soaping ~400ml, coastic soda ~80g, acetic ~150ml, soaping(2nd) ~300ml, fixing ~250ml per 9m batch.
+  // Sodium sulfate ~300g, soaping ~400ml, coastic soda ~80g, acetic ~150ml, soaping(2nd) ~300ml, fixing ~250ml per 9yd batch.
   const DEFAULT_CHEM_ALLOWANCE = 700; // eyeballed, same for either material
 
-  const JAVA_PRICE = 500; // Sodium silicate, per L
-  const UREA_PRICE = 400; // Urea, per kg (Java coloring style)
+  const JAVA_PRICE = 500; // Sodium silicate, per L (input is taken in ml, converted below)
+  const UREA_PRICE = 400; // Urea, per kg (Java coloring style; input is taken in g, converted below)
   const SEWING = { kaftan: 600, 'wrap around skirt': 375, dress: 1000, top: 650, scarf: 125 };
   const PACKAGING = { bag: 175, label: 25 };
   const UTILITY_PER_BATCH = 500 + 60; // gas + water
@@ -474,16 +474,16 @@
 
     const usesJava = styleJava.checked;
     const usesWater = styleWater.checked;
-    const silicateCost = usesJava ? (parseFloat(javaQty.value) || 0) * JAVA_PRICE : 0;
-    const ureaCost = usesJava ? (parseFloat(javaUrea.value) || 0) * UREA_PRICE : 0;
+    const silicateCost = usesJava ? ((parseFloat(javaQty.value) || 0) / 1000) * JAVA_PRICE : 0;   // ml -> L
+    const ureaCost = usesJava ? ((parseFloat(javaUrea.value) || 0) / 1000) * UREA_PRICE : 0;       // g -> kg
     const javaCost = silicateCost + ureaCost;
     const styleLabel = usesWater && usesJava ? 'Water bath + Java'
       : usesJava ? 'Java style' : usesWater ? 'Water bath' : 'No coloring style selected';
 
     const batch = Math.max(1, parseFloat(batchSize.value) || 9);
-    const perMetreUtil = UTILITY_PER_BATCH / batch;
-    const utilCost = perMetreUtil * length;
-    utilRate.value = `Rs ${perMetreUtil.toFixed(1)} / m`;
+    const perYardUtil = UTILITY_PER_BATCH / batch;
+    const utilCost = perYardUtil * length;
+    utilRate.value = `Rs ${perYardUtil.toFixed(1)} / yd`;
 
     const waxRate = (parseFloat(waxTopUp.value) || 0) / batch;
     const chemRate = (parseFloat(chemAllowance.value) || 0) / batch;
@@ -500,7 +500,7 @@
     const totalCost = materialCost + dyeCost + elementCost + javaCost + utilCost + sewingCost + pkgCost;
 
     let html = '';
-    html += row(`${material} (${length} m)`, materialCost);
+    html += row(`${material} (${length} yd)`, materialCost);
     html += row('Dyes', dyeCost);
     html += row('Wax top‑up', waxCost, true);
     html += row('Chemicals', chemCost, true);
