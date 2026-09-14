@@ -215,8 +215,16 @@
         <div class="checkbox-row"><input type="checkbox" id="styleWater" checked><label for="styleWater">Water bath</label></div>
         <div class="checkbox-row"><input type="checkbox" id="styleJava"><label for="styleJava">Java style</label></div>
         <div id="javaQtyWrap" style="margin-top:0.9rem; display:none;">
-          <label for="javaQty">Sodium silicate used (litres) — Rs 500/L</label>
-          <input type="number" id="javaQty" min="0" step="0.1" value="0.2">
+          <div class="field-row">
+            <div class="field">
+              <label for="javaQty">Sodium silicate used (litres) — Rs 500/L</label>
+              <input type="number" id="javaQty" min="0" step="0.1" value="0.2">
+            </div>
+            <div class="field">
+              <label for="javaUrea">Urea used (kg) — Rs 400/kg</label>
+              <input type="number" id="javaUrea" min="0" step="0.05" value="0">
+            </div>
+          </div>
         </div>
       </div>
 
@@ -383,6 +391,7 @@
   const DEFAULT_CHEM_ALLOWANCE = 700; // eyeballed, same for either material
 
   const JAVA_PRICE = 500; // Sodium silicate, per L
+  const UREA_PRICE = 400; // Urea, per kg (Java coloring style)
   const SEWING = { kaftan: 600, 'wrap around skirt': 375, dress: 1000, top: 650, scarf: 125 };
   const PACKAGING = { bag: 175, label: 25 };
   const UTILITY_PER_BATCH = 500 + 60; // gas + water
@@ -409,6 +418,7 @@
   const styleJava = document.getElementById('styleJava');
   const javaQtyWrap = document.getElementById('javaQtyWrap');
   const javaQty = document.getElementById('javaQty');
+  const javaUrea = document.getElementById('javaUrea');
   const designSelect = document.getElementById('design');
   const pkgBag = document.getElementById('pkgBag');
   const pkgLabel = document.getElementById('pkgLabel');
@@ -422,7 +432,7 @@
   const retailSub = document.getElementById('retailSub');
 
   dyeList.querySelectorAll('.dye-qty').forEach(el => el.addEventListener('input', calculate));
-  [materialSelect, lengthInput, javaQty, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp, chemAllowance]
+  [materialSelect, lengthInput, javaQty, javaUrea, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp, chemAllowance]
     .forEach(el => el.addEventListener('input', calculate));
   styleJava.addEventListener('change', () => {
     javaQtyWrap.style.display = styleJava.checked ? 'block' : 'none';
@@ -464,7 +474,9 @@
 
     const usesJava = styleJava.checked;
     const usesWater = styleWater.checked;
-    const javaCost = usesJava ? (parseFloat(javaQty.value) || 0) * JAVA_PRICE : 0;
+    const silicateCost = usesJava ? (parseFloat(javaQty.value) || 0) * JAVA_PRICE : 0;
+    const ureaCost = usesJava ? (parseFloat(javaUrea.value) || 0) * UREA_PRICE : 0;
+    const javaCost = silicateCost + ureaCost;
     const styleLabel = usesWater && usesJava ? 'Water bath + Java'
       : usesJava ? 'Java style' : usesWater ? 'Water bath' : 'No coloring style selected';
 
@@ -492,7 +504,10 @@
     html += row('Dyes', dyeCost);
     html += row('Wax top‑up', waxCost, true);
     html += row('Chemicals', chemCost, true);
-    if (usesJava) html += row('Java coloring (sodium silicate)', javaCost);
+    if (usesJava) {
+      html += row('Java — sodium silicate', silicateCost, true);
+      html += row('Java — urea', ureaCost, true);
+    }
     html += row(`Utility (gas + water)`, utilCost, true);
     html += row(designSelect.value === 'none' ? 'Sewing (none)' : `Sewing — ${designSelect.value}`, sewingCost);
     html += row('Packaging', pkgCost, true);
