@@ -342,7 +342,7 @@
       <div class="card">
         <p class="section-eyebrow">Shade <span style="font-weight:400; text-transform:none; letter-spacing:0;">— pick a colour, amounts scale to your cloth</span></p>
         <div class="swatch-grid" id="dbSwatches"></div>
-        <p class="note">Colours are approximate on-screen samples, shared with Java batik. Light green and Teal are named sheet recipes with fixed dye percentages on weight of fabric (0.25% = 0.25 g per 100 g), regardless of the shade depth above; picking a single dye instead uses the Depth of shade % as its dosing. Select one and the recipe panel gives the milligrams to weigh out for the fabric weight above.</p>
+        <p class="note">Colours are approximate on-screen samples, shared with Java batik. Named multi-dye recipes use their fixed sheet percentages on weight of fabric (0.25% = 0.25 g per 100 g), regardless of the shade depth above; picking a single dye instead uses the Depth of shade % as its dosing. Select one and the recipe panel gives the milligrams to weigh out for the fabric weight above.</p>
       </div>
 
       <div class="card">
@@ -376,7 +376,7 @@
       <div class="card">
         <p class="section-eyebrow">Shade <span style="font-weight:400; text-transform:none; letter-spacing:0;">— pick a colour, amounts scale to your cloth</span></p>
         <div class="swatch-grid" id="jbSwatches"></div>
-        <p class="note">Colours are approximate on-screen samples — the same Shade picker as water bath. Per yard: 4 mg urea, 20 ml sodium silicate, and dye at the sheet's urea&nbsp;:&nbsp;dye = 2&nbsp;:&nbsp;6 ratio — dye is 3&times; the urea weight. For Light green or Teal, that dye weight is split between the two dyes using the sheet's percentage ratio. Java batik doesn't depend on fabric type — only the yards set above drive these amounts.</p>
+        <p class="note">Colours are approximate on-screen samples — the same Shade picker as water bath. Per yard: 4 mg urea, 20 ml sodium silicate, and dye at the sheet's urea&nbsp;:&nbsp;dye = 2&nbsp;:&nbsp;6 ratio — dye is 3&times; the urea weight. For a named multi-dye recipe, that dye weight is split between its dyes using the sheet's percentage ratio. Java batik doesn't depend on fabric type — only the yards set above drive these amounts.</p>
       </div>
 
     </div>
@@ -732,6 +732,41 @@
       dyes:[ ['Yellow 4GL', 0.25], ['Turq Blue G 226%', 1.00] ] },
     { id:'04', label:'Teal', swatch:'#1c8ca3',
       dyes:[ ['Yellow 4GL', 0.26], ['Turq Blue G 226%', 2.40] ] },
+    // Named multi-dye recipes from the dye sample sheets. Sheet names carrying a
+    // strength grade the price list doesn't track separately (e.g. "Yellow 3RF
+    // 133%", "Brill Blue RSP") are costed against their base dye entry above.
+    { id:'13-lt', label:'Olive gold (light)', swatch:'#8a7c1e',
+      dyes:[ ['Yellow CD', 5.0], ['Blue CD', 0.1] ] },
+    { id:'13', label:'Olive gold', swatch:'#8a7c1e',
+      dyes:[ ['Yellow CD', 5.0], ['Blue CD', 0.2] ] },
+    { id:'36-01', label:'Coral 01', swatch:'#d97177',
+      dyes:[ ['Yellow 3RF', 0.20], ['Red 3BF', 0.40] ] },
+    { id:'36-02', label:'Coral 02', swatch:'#d15b64',
+      dyes:[ ['Yellow 3RF', 0.40], ['Red 3BF', 0.60] ] },
+    { id:'36-03', label:'Coral 03', swatch:'#c94f59',
+      dyes:[ ['Yellow 3RF', 0.50], ['Red 3BF', 0.50] ] },
+    { id:'34-01', label:'Raspberry 01', swatch:'#c62b4a',
+      dyes:[ ['Yellow 3RF', 0.30], ['Red 3BF', 0.70] ] },
+    { id:'35-02', label:'Raspberry 02', swatch:'#b8203f',
+      dyes:[ ['Yellow 3RF', 0.20], ['Red 3BF', 0.80] ] },
+    { id:'34-03', label:'Raspberry 03', swatch:'#a91836',
+      dyes:[ ['Yellow 3RF', 0.10], ['Red 3BF', 0.90] ] },
+    { id:'23', label:'Sky turquoise', swatch:'#a9d4d9',
+      dyes:[ ['Yellow 4GL', 0.014], ['Turq Blue G 226%', 0.110] ] },
+    { id:'24', label:'Steel turquoise', swatch:'#5f92a3',
+      dyes:[ ['Yellow 4GL', 0.10], ['Brill Blue', 0.20], ['Turq Blue G 226%', 0.10] ] },
+    { id:'14', label:'Turquoise', swatch:'#2fb6ac',
+      dyes:[ ['Yellow 4GL', 0.3], ['Turq Blue G 226%', 0.16] ] },
+    { id:'15', label:'Deep teal', swatch:'#1a8f8a',
+      dyes:[ ['Yellow 4GL', 0.16], ['Yellow 3RF', 0.03], ['Turq Blue G 226%', 3.00] ] },
+    { id:'olive-lt', label:'Moss (light)', swatch:'#7d7c2a',
+      dyes:[ ['Yellow 3RF', 3.7], ['Navy Blue GG', 0.3] ] },
+    { id:'olive', label:'Moss', swatch:'#6c6b24',
+      dyes:[ ['Yellow 3RF', 3.5], ['Navy Blue GG', 0.5] ] },
+    { id:'5', label:'Olive green', swatch:'#4f5c22',
+      dyes:[ ['Yellow 3RF', 3.3], ['Navy Blue GG', 0.6] ] },
+    { id:'5-alt', label:'Forest green', swatch:'#414d1d',
+      dyes:[ ['Yellow 3RF', 3.0], ['Navy Blue GG', 1.0] ] },
     ...DYES.map(([name]) => ({ id:name, label:name, swatch: DYE_SWATCH[name] || '#999', single:true, dyes:[ [name, null] ] })),
   ];
 
