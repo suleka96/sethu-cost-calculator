@@ -660,9 +660,10 @@
     if (n >= 1)    return (Math.round(n * 10) / 10).toLocaleString('en-US') + ' g';
     return (Math.round(n * 100) / 100).toLocaleString('en-US') + ' g';
   };
-  const mgAmt = mg => mg >= 1000
-    ? `${Math.round(mg).toLocaleString('en-US')} mg &middot; ${gfmt(mg / 1000)}`
-    : `${Math.round(mg).toLocaleString('en-US')} mg`;
+  const gAmt = mg => {
+    const g = mg / 1000;
+    return g.toLocaleString('en-US', { maximumFractionDigits: g >= 1 ? 2 : 3 }) + ' g';
+  };
 
   function ledStr(label, amountStr, dim){
     return `<div class="ledger-row${dim ? ' dim' : ''}"><span class="label">${label}</span><span class="amt">${amountStr}</span></div>`;
@@ -727,7 +728,7 @@
       dyeRows += ledStr(`<b>Shade ${recipe.id} — ${recipe.label}</b>`, `for ${gfmt(weight)}`);
       recipe.dyes.forEach(([name, pct]) => {
         const mg = weight * pct * 10;                 // weight(g) × pct/100 × 1000
-        dyeRows += ledStr(`${name} — ${pct.toFixed(2)}%`, mgAmt(mg), true);
+        dyeRows += ledStr(`${name} — ${pct.toFixed(2)}%`, gAmt(mg), true);
       });
     } else if (recipe) {
       dyeRows = ledStr(`Shade ${recipe.id} — ${recipe.label}`, 'set the yards above', true);
@@ -841,9 +842,9 @@
     let html = '';
     html += ledStr('Fabric', `${yards} yd`);
     html += ledStr(`Sodium silicate — ${JAVA_ML_PER_YARD} ml/yd`, mlfmt(silicateMl));
-    html += ledStr(`Urea — ${JAVA_UREA_MG_PER_YARD} mg/yd`, mgAmt(ureaMg), true);
+    html += ledStr(`Urea — ${JAVA_UREA_MG_PER_YARD} mg/yd`, gAmt(ureaMg), true);
     html += dyeName
-      ? ledStr(`${dyeName} — urea : dye 2 : 6`, mgAmt(dyeMg), true)
+      ? ledStr(`${dyeName} — urea : dye 2 : 6`, gAmt(dyeMg), true)
       : ledStr('Dye', 'choose a dye above', true);
     jbLedger.innerHTML = html;
 
