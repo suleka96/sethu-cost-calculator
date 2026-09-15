@@ -953,6 +953,10 @@
       dbAddToDesignNote.textContent = 'Set the fabric type and yards above first.';
       return;
     }
+    if (!lastRecipe.dyes.length) {
+      dbAddToDesignNote.textContent = 'Pick a colour above first.';
+      return;
+    }
 
     const notes = [];
     if (MATERIALS[lastRecipe.fabricType] == null) {
