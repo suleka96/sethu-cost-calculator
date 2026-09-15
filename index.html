@@ -885,6 +885,7 @@
   });
 
   /* ===================== Java batik ===================== */
+  const JAVA_WATER_ML_PER_YARD = 100; // water, ml per yard
   const JAVA_ML_PER_YARD = 20;    // sodium silicate, ml per yard
   const JAVA_UREA_MG_PER_YARD = 4; // urea, mg per yard
   const JAVA_UREA_RATIO = 2;
@@ -904,6 +905,7 @@
   let lastJavaRecipe = null;
   function calcJava(){
     const yards = Math.max(0, parseFloat(recipeYards.value) || 0);
+    const waterMl = yards * JAVA_WATER_ML_PER_YARD;
     const silicateMl = yards * JAVA_ML_PER_YARD;
     const ureaMg = yards * JAVA_UREA_MG_PER_YARD;
     const dyeMg = ureaMg * (JAVA_DYE_RATIO / JAVA_UREA_RATIO);
@@ -911,14 +913,15 @@
 
     let html = '';
     html += ledStr('Fabric', `${yards} yd`);
-    html += ledStr(`Sodium silicate — ${JAVA_ML_PER_YARD} ml/yd`, mlfmt(silicateMl));
+    html += ledStr(`Water — ${JAVA_WATER_ML_PER_YARD} ml/yd`, mlfmt(waterMl));
+    html += ledStr(`Sodium silicate — ${JAVA_ML_PER_YARD} ml/yd`, mlfmt(silicateMl), true);
     html += ledStr(`Urea — ${JAVA_UREA_MG_PER_YARD} mg/yd`, gAmt(ureaMg), true);
     html += dyeName
       ? ledStr(`${dyeName} — urea : dye 2 : 6`, gAmt(dyeMg), true)
       : ledStr('Dye', 'choose a dye above', true);
     jbLedger.innerHTML = html;
 
-    lastJavaRecipe = { yards, silicateMl, ureaMg, dyeMg, dyeName };
+    lastJavaRecipe = { yards, waterMl, silicateMl, ureaMg, dyeMg, dyeName };
   }
   jbDye.addEventListener('input', calcJava);
 
