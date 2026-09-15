@@ -194,6 +194,7 @@
   <nav class="tabs">
     <button type="button" class="tab-btn is-active" data-tab="cost">Product cost</button>
     <button type="button" class="tab-btn" data-tab="dye">Calculate Recipe</button>
+    <button type="button" class="tab-btn" data-tab="soap">Soaping &amp; Fixing</button>
   </nav>
 
   <div id="tab-cost" class="tab-panel">
@@ -441,6 +442,42 @@
   </div>
 
   </div>
+
+  <div id="tab-soap" class="tab-panel" hidden>
+    <div class="layout">
+      <div class="form-stack">
+
+        <div class="card">
+          <p class="section-eyebrow">Fabric</p>
+          <div class="field-row">
+            <div class="field">
+              <label for="spFabricType">Fabric type</label>
+              <select id="spFabricType">
+                <option value="Super Voil">Super Voil</option>
+                <option value="Modal Silk">Modal Silk</option>
+                <option value="Rayon">Rayon</option>
+                <option value="Cotton">100% Cotton</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="spYards">Fabric (yards)</label>
+              <input type="number" id="spYards" min="0" step="0.25" value="3">
+            </div>
+          </div>
+          <p class="note">Soaping and fixing happen once, at the very end of the dyeing cycle — the same step whether the piece went through water bath or Java batik — so it's kept separate from the recipe above and just needs the yards for this run.</p>
+        </div>
+
+      </div>
+
+      <div class="summary">
+        <div class="card">
+          <p class="section-eyebrow">Soaping &amp; fixing</p>
+          <div id="spLedger"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -716,7 +753,6 @@
     const saltG    = chart.salt * water;
     const causticG = chart.caustic * water;
     const aceticG  = ACETIC_G_PER_L * water;
-    const soapG    = SOAP_G_PER_L * water;
 
     dbChartBody.querySelectorAll('tr').forEach(tr => {
       tr.classList.toggle('hl', tr.dataset.depth === depth);
@@ -748,8 +784,6 @@
 
     let after = '';
     after += ledStr('Acetic acid — neutralize · 0.75 g/l', gfmt(aceticG), true);
-    after += ledStr('Bilvitan DPS — soaping · 1 g/l', gfmt(soapG), true);
-    after += ledStr('Felotra FIX — fixing', 'per supplier dose', true);
     dbAfter.innerHTML = after;
 
     // Keep the last calculation around so "Add to design" can hand it to the Product Cost tab.
@@ -881,11 +915,34 @@
     jbAddToDesignNote.textContent = `Sent to Product Cost: ${lastJavaRecipe.yards} yd, Java batik — ${lastJavaRecipe.dyeName}.`;
   });
 
+  /* ===================== Soaping & Fixing ===================== */
+  const spFabricType = document.getElementById('spFabricType');
+  const spYards = document.getElementById('spYards');
+  const spLedger = document.getElementById('spLedger');
+
+  function calcSoap(){
+    const fabricType = spFabricType.value;
+    const gPerYard = FABRIC_G_PER_YARD[fabricType];
+    const yards = Math.max(0, parseFloat(spYards.value) || 0);
+    const weight = yards * gPerYard;
+    const water = (weight / 100) * WATER_L_PER_100G;
+    const soapG = SOAP_G_PER_L * water;
+
+    let html = '';
+    html += ledStr(`Fabric — ${fabricType}, ${yards} yd`, gfmt(weight));
+    html += ledStr('Water', `${water.toLocaleString('en-US', { maximumFractionDigits:2 })} L`);
+    html += ledStr('Bilvitan DPS — soaping · 1 g/l', gfmt(soapG), true);
+    html += ledStr('Felotra FIX — fixing', 'per supplier dose', true);
+    spLedger.innerHTML = html;
+  }
+  [spFabricType, spYards].forEach(el => el.addEventListener('input', calcSoap));
+
   /* ===================== Tab switching ===================== */
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabPanels = {
     cost: document.getElementById('tab-cost'),
     dye:  document.getElementById('tab-dye'),
+    soap: document.getElementById('tab-soap'),
   };
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -896,6 +953,7 @@
 
   calcDye();
   calcJava();
+  calcSoap();
 </script>
 </body>
 </html>
