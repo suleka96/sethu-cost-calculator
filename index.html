@@ -585,30 +585,30 @@
     const length = Math.max(0, parseFloat(recipeYards.value) || 0);
     const materialCost = (MATERIALS[material] || 0) * length;
 
-    // Water bath: sum dyes + salt/caustic/acetic across every "Add to design" session.
-    let waterDyeCost = 0, waterChemCost = 0;
+    // Water bath: sum dyes + salt/caustic/acetic separately, across every
+    // "Add to design" session, so each ingredient's cost can be checked on its own.
+    let waterDyeCost = 0, waterSaltCost = 0, waterCausticCost = 0, waterAceticCost = 0;
     waterBathSessions.forEach(s => {
       s.dyes.forEach(([name, mg]) => { waterDyeCost += dyeCostFor(name, mg); });
-      waterChemCost += (s.saltG / 1000) * SALT_PRICE_PER_KG
-                     + (s.causticG / 1000) * CAUSTIC_PRICE_PER_KG
-                     + (s.aceticG / 1000) * ACETIC_PRICE_PER_KG;
+      waterSaltCost += (s.saltG / 1000) * SALT_PRICE_PER_KG;
+      waterCausticCost += (s.causticG / 1000) * CAUSTIC_PRICE_PER_KG;
+      waterAceticCost += (s.aceticG / 1000) * ACETIC_PRICE_PER_KG;
     });
-    const waterBathCost = waterDyeCost + waterChemCost;
+    const waterBathCost = waterDyeCost + waterSaltCost + waterCausticCost + waterAceticCost;
 
-    // Java batik: sum dye + sodium silicate/urea across every "Add to design" session.
-    let javaDyeCost = 0, javaChemCost = 0;
+    // Java batik: sum dye + sodium silicate + urea separately, across every session.
+    let javaDyeCost = 0, javaSilicateCost = 0, javaUreaCost = 0;
     javaBatikSessions.forEach(s => {
       javaDyeCost += dyeCostFor(s.dyeName, s.dyeMg);
-      javaChemCost += (s.silicateMl / 1000) * JAVA_PRICE + (s.ureaMg / 1000000) * UREA_PRICE; // ureaMg: mg -> kg
+      javaSilicateCost += (s.silicateMl / 1000) * JAVA_PRICE;
+      javaUreaCost += (s.ureaMg / 1000000) * UREA_PRICE; // mg -> kg
     });
-    const javaBatikCost = javaDyeCost + javaChemCost;
+    const javaBatikCost = javaDyeCost + javaSilicateCost + javaUreaCost;
 
     // Wax, utility, soaping, fixing and fabric softener only count once "Add To Cost"
     // has been clicked on the Wax & Utility tab — lastWaxUtil is that committed snapshot.
     const { waxCost, utilCost, soapCost, fixCost, softenerRsCost } = lastWaxUtil;
     const waxUtilCost = waxCost + utilCost + soapCost + fixCost + softenerRsCost;
-
-    const coloringCost = waterBathCost + javaBatikCost;
 
     const sewingCost = designSelect.value === 'none' ? 0 : SEWING[designSelect.value];
 
@@ -616,7 +616,7 @@
     if (pkgBag.checked) pkgCost += PACKAGING.bag;
     if (pkgLabel.checked) pkgCost += PACKAGING.label;
 
-    const totalCost = materialCost + coloringCost + waxUtilCost + sewingCost + pkgCost;
+    const totalCost = materialCost + waterBathCost + javaBatikCost + waxUtilCost + sewingCost + pkgCost;
 
     renderColoringStyle();
 
@@ -624,9 +624,21 @@
     html += row(`${material} (${length} yd)`, materialCost);
     html += '<div class="ledger-divider"></div>';
     html += row(`Water bath — ${waterBathSessions.length} session${waterBathSessions.length === 1 ? '' : 's'}`, waterBathCost);
+    html += row('Dyes', waterDyeCost, true);
+    html += row('Glauber salt', waterSaltCost, true);
+    html += row('Caustic soda', waterCausticCost, true);
+    html += row('Acetic acid', waterAceticCost, true);
     html += row(`Java batik — ${javaBatikSessions.length} session${javaBatikSessions.length === 1 ? '' : 's'}`, javaBatikCost);
-    html += row('Wax &amp; utility', waxUtilCost);
-    html += `<div class="ledger-total"><span>Coloring + wax &amp; utility</span><span class="amt">${fmt(coloringCost + waxUtilCost)}</span></div>`;
+    html += row('Dye', javaDyeCost, true);
+    html += row('Sodium silicate', javaSilicateCost, true);
+    html += row('Urea', javaUreaCost, true);
+    html += '<div class="ledger-divider"></div>';
+    html += row('Wax top‑up', waxCost);
+    html += row('Utility (gas + water)', utilCost, true);
+    html += row('Soaping', soapCost, true);
+    html += row('Fixing', fixCost, true);
+    html += row('Fabric softener', softenerRsCost, true);
+    html += '<div class="ledger-divider"></div>';
     html += row(designSelect.value === 'none' ? 'Sewing (none)' : `Sewing — ${designSelect.value}`, sewingCost);
     html += row('Packaging', pkgCost, true);
     html += '<div class="ledger-divider"></div>';
