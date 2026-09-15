@@ -516,6 +516,17 @@
   let javaBatikSessions = lsGet('sethuJavaSessions', []);
 
   const fmt = n => 'Rs ' + Math.round(n).toLocaleString('en-US');
+  // Whole-rupee rounding hides genuinely tiny ingredient costs (e.g. a few mg of
+  // urea) as "Rs 0" — show 2 decimals for any non-zero amount under Rs 1 so the
+  // Cost Breakdown stays verifiable instead of looking like a missing calculation.
+  const fmtCost = n => {
+    if (!(n > 0 && n < 1)) return fmt(n);
+    for (const dp of [2, 3, 4]) {
+      const s = n.toFixed(dp);
+      if (parseFloat(s) > 0) return 'Rs ' + s;
+    }
+    return 'Rs ' + n.toFixed(4);
+  };
 
   // Matches a shade recipe's dye name to a Product Cost price — names carry an
   // "Intracron " brand prefix and one known spelling difference (Turq/Teal).
@@ -568,7 +579,7 @@
   });
 
   function row(label, amount, dim){
-    return `<div class="ledger-row${dim ? ' dim' : ''}"><span class="label">${label}</span><span class="amt">${fmt(amount)}</span></div>`;
+    return `<div class="ledger-row${dim ? ' dim' : ''}"><span class="label">${label}</span><span class="amt">${fmtCost(amount)}</span></div>`;
   }
 
   function renderColoringStyle(){
