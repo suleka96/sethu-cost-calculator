@@ -193,7 +193,6 @@
 
   <nav class="tabs">
     <button type="button" class="tab-btn is-active" data-tab="dye">Calculate Recipe</button>
-    <button type="button" class="tab-btn" data-tab="soap">Soaping &amp; Fixing</button>
     <button type="button" class="tab-btn" data-tab="wax">Wax &amp; Utility</button>
     <button type="button" class="tab-btn" data-tab="cost">Product cost</button>
   </nav>
@@ -210,6 +209,8 @@
             <select id="material">
               <option value="Super Voil">Super Voil — Rs 425/yd</option>
               <option value="Modal Silk">Modal Silk — Rs 1,000/yd</option>
+              <option value="Cotton">Cotton — Rs 425/yd</option>
+              <option value="Rayon">Rayon — Rs 700/yd</option>
             </select>
           </div>
           <div class="field">
@@ -239,7 +240,7 @@
       </div>
 
       <div class="card">
-        <p class="section-eyebrow">Dyes used <span style="font-weight:400; text-transform:none; letter-spacing:0;">— enter mg used, priced per 100mg</span></p>
+        <p class="section-eyebrow">Dyes used <span style="font-weight:400; text-transform:none; letter-spacing:0;">— enter mg used, priced per 100g</span></p>
         <div class="qty-list" id="dyeList"></div>
       </div>
 
@@ -413,27 +414,6 @@
 
   </div>
 
-  <div id="tab-soap" class="tab-panel" hidden>
-    <div class="layout">
-      <div class="form-stack">
-
-        <div class="card">
-          <p class="section-eyebrow">Soaping &amp; fixing</p>
-          <p class="note" style="margin-top:0; border-top:none; padding-top:0;">Soaping and fixing happen once, at the very end of the dyeing cycle — the same step whether the piece went through water bath or Java batik. No inputs here: the amounts come straight from whatever you last sent with "Add to design" on the Calculate Recipe tab.</p>
-        </div>
-
-      </div>
-
-      <div class="summary">
-        <div class="card">
-          <p class="section-eyebrow">Recipe</p>
-          <p class="note" id="spSourceNote" style="margin-top:0; border-top:none; padding-top:0;"></p>
-          <div id="spLedger"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div id="tab-wax" class="tab-panel" hidden>
     <div class="layout">
       <div class="form-stack">
@@ -444,38 +424,50 @@
             <label for="batchSize">Batch size (yd)</label>
             <input type="number" id="batchSize" min="1" step="0.5" value="9">
           </div>
-          <p class="note">Wax, chemicals, gas and water are all set as a flat cost for one production batch, then scaled down by fabric used ÷ batch size — using the fabric used (yards) from Product Cost.</p>
+          <p class="note">Everything on this tab is batch-level: wax, the water and gas to boil it off, then soaping, fixing and fabric softener applied to the whole batch at once — all set once per batch, then scaled down by fabric used ÷ batch size, using the fabric used (yards) from Product Cost.</p>
         </div>
 
         <div class="card">
-          <p class="section-eyebrow">Wax &amp; chemicals</p>
+          <p class="section-eyebrow">Wax</p>
           <div class="field-row">
             <div class="field">
-              <label for="waxTopUp">Wax top‑up <span id="waxFor"></span> (Rs / batch)</label>
+              <label for="wuMaterial">Fabric</label>
+              <select id="wuMaterial">
+                <option value="Super Voil">Super Voil</option>
+                <option value="Modal Silk">Modal Silk</option>
+                <option value="Cotton">Cotton</option>
+                <option value="Rayon">Rayon</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="waxTopUp">Wax top‑up (Rs / batch)</label>
               <div class="margin-input-wrap">
                 <input type="number" id="waxTopUp" min="0" step="5" value="225">
                 <button class="reset-btn" id="resetWax" type="button">suggested</button>
               </div>
             </div>
-            <div class="field">
-              <label for="chemAllowance">Chemicals — salt, caustic, acetic (Rs / batch)</label>
-              <div class="margin-input-wrap">
-                <input type="number" id="chemAllowance" min="0" step="5" value="700">
-                <button class="reset-btn" id="resetChem" type="button">from recipe</button>
-              </div>
-            </div>
           </div>
-          <p class="note">Wax: ~180g/batch (20g/yd over a 9yd batch) — Super Voil split ~50% paraffin / 35% bee wax / 15% gum rosin, Modal Silk paraffin‑only — at sheet prices. "From recipe" prices the exact Glauber salt, caustic soda and acetic acid from your last water bath recipe (Rs 130 / 450 / 800 per kg) instead of this flat estimate.</p>
-          <p class="note" id="chemFromRecipeStatus" style="margin-top:0.4rem; border-top:none; padding-top:0;"></p>
+          <p class="note">The wax blend — and its cost — depends on the fabric: ~180g/batch (20g/yd over a 9yd batch). Super Voil &amp; Cotton split ~50% paraffin / 35% bee wax / 15% gum rosin (Rs 800 / 2,000 / 1,000 per kg); Modal Silk &amp; Rayon are paraffin‑only (Rs 800/kg). Kept in sync with Product Cost's material.</p>
         </div>
 
         <div class="card">
-          <p class="section-eyebrow">Utility (gas + water)</p>
+          <p class="section-eyebrow">Utility — boiling the wax off (gas + water)</p>
           <div class="field">
             <label>Rate this gives, at the batch size set above</label>
             <input type="text" id="utilRate" disabled>
           </div>
-          <p class="note">Sheet prices gas (Rs 500) &amp; water (Rs 60) per production batch — scaled by fabric used ÷ batch size. Equipment (junting, funnel, gloves, brush) is a one‑time tool cost, so it's left out of the per‑item price.</p>
+          <p class="note">Sheet prices gas (Rs 500) &amp; water (Rs 60) per production batch, for boiling the wax off — scaled by fabric used ÷ batch size. Equipment (junting, funnel, gloves, brush) is a one‑time tool cost, so it's left out of the per‑item price.</p>
+        </div>
+
+        <div class="card">
+          <p class="section-eyebrow">Soaping, fixing &amp; softener</p>
+          <p class="section-eyebrow" style="font-size:0.66rem; color:var(--ink-soft); margin-bottom:0.6rem;">Assumption — 10 ml water per 3 yd</p>
+          <div id="wuSoapFixLedger"></div>
+          <div class="field" style="margin-top:0.9rem;">
+            <label for="softenerPricePerL">Fabric softener price (Rs / L)</label>
+            <input type="number" id="softenerPricePerL" min="0" step="10" value="1200">
+          </div>
+          <p class="note">Water needed scales with fabric used (yards): 3 yd → 10 ml, 6 yd → 20 ml, and so on; soaping, fixing and fabric softener are each dosed at 2&times; that water figure, priced at the sheet's Rs 550/L, Rs 700/L and Rs 1,200/L.</p>
         </div>
 
       </div>
@@ -484,6 +476,8 @@
         <div class="card">
           <p class="section-eyebrow">Wax &amp; utility cost</p>
           <div id="wuLedger"></div>
+          <button type="button" class="cta-btn" id="wuAddToCost">Add To Cost →</button>
+          <p class="note" id="wuAddToCostNote" style="margin-top:0.6rem;"></p>
         </div>
       </div>
     </div>
@@ -492,8 +486,10 @@
 </div>
 
 <script>
-  const MATERIALS = { 'Super Voil': 425, 'Modal Silk': 1000 };
-  const DEFAULT_MARGIN = { 'Super Voil': 80, 'Modal Silk': 140 };
+  const MATERIALS = { 'Super Voil': 425, 'Modal Silk': 1000, 'Cotton': 425, 'Rayon': 700 };
+  // No sheet margin is given for Cotton/Rayon — reusing their wax-group sibling's default
+  // (Cotton with Super Voil, Rayon with Modal Silk) until a real figure is supplied.
+  const DEFAULT_MARGIN = { 'Super Voil': 80, 'Modal Silk': 140, 'Cotton': 80, 'Rayon': 140 };
 
   const DYES = [
     ['Yellow 4GL', 500], ['Red 3BF', 350], ['Scarlet 2G', 1600], ['Yellow 3RF', 350],
@@ -504,24 +500,39 @@
   ];
 
   // Wax is mostly recovered/reused, so this is a suggested per-batch top-up, not a full kg.
-  // ~180g net wax per 9yd batch (20g/yd). Super Voil's sheet lists a 3-part wax recipe
-  // (paraffin/bee wax/gum rosin, assumed ~50/35/15 split); Modal Silk's is paraffin-only.
-  const DEFAULT_WAX_TOPUP = { 'Super Voil': 225, 'Modal Silk': 145 };
-  // Sodium sulfate ~300g, soaping ~400ml, coastic soda ~80g, acetic ~150ml, soaping(2nd) ~300ml, fixing ~250ml per 9yd batch.
-  const DEFAULT_CHEM_ALLOWANCE = 700; // eyeballed, same for either material
+  // ~180g net wax per 9yd batch (20g/yd). Sheet groups wax by fabric: Super Voil & Cotton
+  // use the 3-part blend (paraffin/bee wax/gum rosin, ~50/35/15 split), Modal Silk & Rayon
+  // are paraffin-only.
+  const DEFAULT_WAX_TOPUP = { 'Super Voil': 225, 'Modal Silk': 145, 'Cotton': 225, 'Rayon': 145 };
 
   const JAVA_PRICE = 500; // Sodium silicate, per L (input is taken in ml, converted below)
   const UREA_PRICE = 400; // Urea, per kg (Java coloring style; input is taken in g, converted below)
   const SALT_PRICE_PER_KG = 130;     // Sodium sulfate / Glauber salt, sheet
   const CAUSTIC_PRICE_PER_KG = 450;  // Caustic soda, sheet
   const ACETIC_PRICE_PER_KG = 800;   // Acetic acid, sheet
+  const SOAPING_PRICE_PER_L = 550;   // Bilvitan DPS / soaping, sheet (a 2nd-stage soaping at ~Rs 400/L
+                                      // isn't modeled — no precise dose is on file for that stage)
+  const FIXING_PRICE_PER_L = 700;    // Felotra FIX, sheet
+
+  // Soaping/fixing/acetic (this stage)/softener assumption: 3 yd needs 10 ml water,
+  // and each of the four is dosed at 2x that water figure (20 ml per 10 ml water).
+  const SOAP_FIX_WATER_ML_PER_3YD = 10;
+  const SOAP_FIX_CHEM_PER_WATER = 2;
+  const soapFixWaterMl = yards => (yards / 3) * SOAP_FIX_WATER_ML_PER_3YD;
+  const soapFixChemMl = yards => soapFixWaterMl(yards) * SOAP_FIX_CHEM_PER_WATER;
+
   const SEWING = { kaftan: 600, 'wrap around skirt': 375, dress: 1000, top: 650, scarf: 125 };
   const PACKAGING = { bag: 175, label: 25 };
   const UTILITY_PER_BATCH = 500 + 60; // gas + water
 
   // Remembered from the last "Add to design" click (either Water bath or Java batik) —
-  // lets Soaping & Fixing and Wax & Utility use real recipe numbers instead of asking again.
+  // lets Wax & Utility's dye-bath chemicals use real recipe numbers instead of asking again.
   let lastDesign = null;
+
+  // Remembered from the last "Add To Cost" click on Wax & Utility — Product Cost's total
+  // only reflects this committed snapshot, not whatever's currently in the Wax & Utility
+  // tab's fields (mirrors how "Add to design" works for Calculate Recipe).
+  let lastWaxUtil = { waxCost: 0, utilCost: 0, soapCost: 0, fixCost: 0, softenerRsCost: 0 };
 
   const fmt = n => 'Rs ' + Math.round(n).toLocaleString('en-US');
 
@@ -529,14 +540,13 @@
   DYES.forEach(([name, price], i) => {
     const row = document.createElement('div');
     row.className = 'qty-row';
-    row.innerHTML = `<div class="name">${name}<small>Rs ${price} / 100mg</small></div>
+    row.innerHTML = `<div class="name">${name}<small>Rs ${price} / 100g</small></div>
       <input type="number" class="dye-qty" data-name="${name}" data-price="${price}" min="0" step="10" value="0">`;
     dyeList.appendChild(row);
   });
 
-  const waxFor = document.getElementById('waxFor');
   const waxTopUp = document.getElementById('waxTopUp');
-  const chemAllowance = document.getElementById('chemAllowance');
+  const softenerPricePerL = document.getElementById('softenerPricePerL');
   const resetWaxBtn = document.getElementById('resetWax');
 
   const materialSelect = document.getElementById('material');
@@ -559,7 +569,7 @@
   const retailSub = document.getElementById('retailSub');
 
   dyeList.querySelectorAll('.dye-qty').forEach(el => el.addEventListener('input', calculate));
-  [materialSelect, lengthInput, javaQty, javaUrea, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp, chemAllowance]
+  [materialSelect, lengthInput, javaQty, javaUrea, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp, softenerPricePerL]
     .forEach(el => el.addEventListener('input', calculate));
   styleJava.addEventListener('change', () => {
     javaQtyWrap.style.display = styleJava.checked ? 'block' : 'none';
@@ -570,7 +580,7 @@
   materialSelect.addEventListener('change', () => {
     marginInput.value = DEFAULT_MARGIN[materialSelect.value];
     waxTopUp.value = DEFAULT_WAX_TOPUP[materialSelect.value];
-    waxFor.textContent = `(${materialSelect.value})`;
+    wuMaterial.value = materialSelect.value;
     calculate();
   });
 
@@ -596,7 +606,7 @@
     let dyeCost = 0;
     dyeList.querySelectorAll('.dye-qty').forEach(el => {
       const mgUsed = parseFloat(el.value) || 0;
-      dyeCost += (mgUsed / 100) * parseFloat(el.dataset.price); // price is per 100mg
+      dyeCost += (mgUsed / 100000) * parseFloat(el.dataset.price); // price is per 100g (100,000 mg)
     });
 
     const usesJava = styleJava.checked;
@@ -607,16 +617,13 @@
     const styleLabel = usesWater && usesJava ? 'Water bath + Java'
       : usesJava ? 'Java style' : usesWater ? 'Water bath' : 'No coloring style selected';
 
-    const batch = Math.max(1, parseFloat(batchSize.value) || 9);
-    const perYardUtil = UTILITY_PER_BATCH / batch;
-    const utilCost = perYardUtil * length;
-    utilRate.value = `Rs ${perYardUtil.toFixed(1)} / yd`;
+    const recipeChem = chemCostFromDesign();
+    const chemCost = recipeChem ? recipeChem.cost : 0;   // exact from recipe, no batch scaling
 
-    const waxRate = (parseFloat(waxTopUp.value) || 0) / batch;
-    const chemRate = (parseFloat(chemAllowance.value) || 0) / batch;
-    const waxCost = waxRate * length;
-    const chemCost = chemRate * length;
-    const elementCost = waxCost + chemCost;
+    // Wax, utility, soaping, fixing and fabric softener only count once "Add To Cost"
+    // has been clicked on the Wax & Utility tab — lastWaxUtil is that committed snapshot.
+    const { waxCost, utilCost, soapCost, fixCost, softenerRsCost } = lastWaxUtil;
+    const elementCost = waxCost + soapCost + fixCost + softenerRsCost + chemCost;
 
     const sewingCost = designSelect.value === 'none' ? 0 : SEWING[designSelect.value];
 
@@ -630,7 +637,10 @@
     html += row(`${material} (${length} yd)`, materialCost);
     html += row('Dyes', dyeCost);
     html += row('Wax top‑up', waxCost, true);
-    html += row('Chemicals', chemCost, true);
+    html += row('Dye‑bath chemicals', chemCost, true);
+    html += row('Soaping', soapCost, true);
+    html += row('Fixing', fixCost, true);
+    html += row('Fabric softener', softenerRsCost, true);
     if (usesJava) {
       html += row('Java — sodium silicate', silicateCost, true);
       html += row('Java — urea', ureaCost, true);
@@ -658,7 +668,6 @@
   javaQtyWrap.style.display = 'none';
   marginInput.value = DEFAULT_MARGIN[materialSelect.value];
   waxTopUp.value = DEFAULT_WAX_TOPUP[materialSelect.value];
-  waxFor.textContent = `(${materialSelect.value})`;
 
   /* ===================== Calculate Recipe tab ===================== */
   const dbModeWater = document.getElementById('dbModeWater');
@@ -863,8 +872,6 @@
       fabricType: lastRecipe.fabricType, yards: lastRecipe.yards, weightG: lastRecipe.weight,
       waterL: lastRecipe.water, saltG: lastRecipe.saltG, causticG: lastRecipe.causticG, aceticG: lastRecipe.aceticG,
     };
-    applyChemFromDesign();   // price the real salt/caustic/acetic instead of the flat estimate
-    calcSoap();
 
     calculate();
     tabBtns.forEach(b => b.classList.toggle('is-active', b.dataset.tab === 'cost'));
@@ -888,7 +895,7 @@
   DYES.forEach(([name, price]) => {
     const opt = document.createElement('option');
     opt.value = name;
-    opt.textContent = `${name} — Rs ${price}/100mg`;
+    opt.textContent = `${name} — Rs ${price}/100g`;
     jbDye.appendChild(opt);
   });
 
@@ -940,7 +947,6 @@
       fabricType: null, yards: lastJavaRecipe.yards, weightG: null,
       waterL: null, saltG: 0, causticG: 0, aceticG: 0,
     };
-    calcSoap();
 
     calculate();
     tabBtns.forEach(b => b.classList.toggle('is-active', b.dataset.tab === 'cost'));
@@ -949,34 +955,13 @@
     jbAddToDesignNote.textContent = `Sent to Product Cost: ${lastJavaRecipe.yards} yd, Java batik — ${lastJavaRecipe.dyeName}.`;
   });
 
-  /* ===================== Soaping & Fixing ===================== */
-  const spSourceNote = document.getElementById('spSourceNote');
-  const spLedger = document.getElementById('spLedger');
-
-  function calcSoap(){
-    if (!lastDesign) {
-      spSourceNote.textContent = '';
-      spLedger.innerHTML = ledStr('No recipe added yet', 'add one from Calculate Recipe', true);
-      return;
-    }
-    if (lastDesign.waterL == null) {
-      spSourceNote.textContent = `From last recipe: Java batik, ${lastDesign.yards} yd.`;
-      spLedger.innerHTML = ledStr('Water volume', "not tracked for Java batik yet", true);
-      return;
-    }
-    const soapG = SOAP_G_PER_L * lastDesign.waterL;
-    spSourceNote.textContent = `From last recipe: ${lastDesign.fabricType}, ${lastDesign.yards} yd.`;
-    let html = '';
-    html += ledStr('Bilvitan DPS — soaping · 1 g/l', gfmt(soapG));
-    html += ledStr('Felotra FIX — fixing', 'per supplier dose', true);
-    spLedger.innerHTML = html;
-  }
-
   /* ===================== Wax & Utility ===================== */
-  const resetChemBtn = document.getElementById('resetChem');
-  const chemFromRecipeStatus = document.getElementById('chemFromRecipeStatus');
+  const wuMaterial = document.getElementById('wuMaterial');
   const wuLedger = document.getElementById('wuLedger');
 
+  // Salt/caustic/acetic from the dye bath itself are precise for this exact piece
+  // already (Calculate Recipe's water bath knows the litres used) — kept as its own
+  // Product Cost row, separate from Wax & Utility's batch-level costs above.
   function chemCostFromDesign(){
     if (!lastDesign || lastDesign.method !== 'water' || !lastDesign.yards) return null;
     const cost = (lastDesign.saltG / 1000) * SALT_PRICE_PER_KG
@@ -985,40 +970,73 @@
     return { cost, yards: lastDesign.yards };
   }
 
-  function applyChemFromDesign(){
-    const res = chemCostFromDesign();
-    if (!res) {
-      chemFromRecipeStatus.textContent = 'Add a water bath recipe to design first (Calculate Recipe tab) to price real chemical usage.';
-      return;
-    }
-    const batch = Math.max(1, parseFloat(batchSize.value) || 9);
-    chemAllowance.value = Math.round((res.cost / res.yards) * batch);
-    chemFromRecipeStatus.textContent = `Priced from the last water bath recipe: ${fmt(res.cost)} for ${res.yards} yd (Glauber salt, caustic soda, acetic acid).`;
-    calculate();
-  }
-  resetChemBtn.addEventListener('click', applyChemFromDesign);
+  wuMaterial.value = materialSelect.value;
+  wuMaterial.addEventListener('change', () => {
+    materialSelect.value = wuMaterial.value;
+    materialSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  });
 
-  function calcWaxUtil(){
+  const wuSoapFixLedger = document.getElementById('wuSoapFixLedger');
+  const wuAddToCost = document.getElementById('wuAddToCost');
+  const wuAddToCostNote = document.getElementById('wuAddToCostNote');
+
+  // Everything here is a live preview until "Add To Cost" is clicked — Product Cost's
+  // total only reflects the last committed snapshot, the same way Calculate Recipe's
+  // "Add to design" works.
+  function computeWaxUtilCosts(){
     const length = Math.max(0, parseFloat(lengthInput.value) || 0);
     const batch = Math.max(1, parseFloat(batchSize.value) || 9);
     const waxCost = ((parseFloat(waxTopUp.value) || 0) / batch) * length;
-    const chemCost = ((parseFloat(chemAllowance.value) || 0) / batch) * length;
-    const utilCost = (UTILITY_PER_BATCH / batch) * length;
+    const perYardUtil = UTILITY_PER_BATCH / batch;
+    const utilCost = perYardUtil * length;
+    utilRate.value = `Rs ${perYardUtil.toFixed(1)} / yd`;
+
+    // Soaping/fixing/softener water is worked out for the whole batch, then this piece
+    // pays its yards/batch share — same mechanism as wax and utility above.
+    const batchWaterMl = soapFixWaterMl(batch);
+    const chemMl = soapFixChemMl(length);
+    const soapCost = (chemMl / 1000) * SOAPING_PRICE_PER_L;
+    const fixCost = (chemMl / 1000) * FIXING_PRICE_PER_L;
+    const softenerRsCost = (chemMl / 1000) * (parseFloat(softenerPricePerL.value) || 0);
+
+    return { length, batch, waxCost, utilCost, soapCost, fixCost, softenerRsCost, batchWaterMl };
+  }
+
+  function calcWaxUtil(){
+    const c = computeWaxUtilCosts();
+
+    let sfHtml = '';
+    sfHtml += ledStr(`Water — for a ${c.batch} yd batch`, `${c.batchWaterMl.toLocaleString('en-US', { maximumFractionDigits:1 })} ml`);
+    sfHtml += ledStr(`Soaping — ${c.length} of ${c.batch} yd`, fmt(c.soapCost), true);
+    sfHtml += ledStr(`Fixing — ${c.length} of ${c.batch} yd`, fmt(c.fixCost), true);
+    sfHtml += ledStr(`Fabric softener — ${c.length} of ${c.batch} yd`, fmt(c.softenerRsCost), true);
+    wuSoapFixLedger.innerHTML = sfHtml;
 
     let html = '';
-    html += ledStr(`Wax top‑up — ${length} yd of ${batch} yd batch`, fmt(waxCost));
-    html += ledStr('Chemicals', fmt(chemCost), true);
-    html += ledStr('Utility (gas + water)', fmt(utilCost), true);
+    html += ledStr(`Wax top‑up — ${c.length} yd of ${c.batch} yd batch`, fmt(c.waxCost));
+    html += ledStr('Utility (gas + water)', fmt(c.utilCost), true);
+    html += ledStr('Soaping', fmt(c.soapCost), true);
+    html += ledStr('Fixing', fmt(c.fixCost), true);
+    html += ledStr('Fabric softener', fmt(c.softenerRsCost), true);
     html += '<div class="ledger-divider"></div>';
-    html += `<div class="ledger-total"><span>Subtotal</span><span class="amt">${fmt(waxCost + chemCost + utilCost)}</span></div>`;
+    const subtotal = c.waxCost + c.utilCost + c.soapCost + c.fixCost + c.softenerRsCost;
+    html += `<div class="ledger-total"><span>Subtotal</span><span class="amt">${fmt(subtotal)}</span></div>`;
     wuLedger.innerHTML = html;
   }
+
+  wuAddToCost.addEventListener('click', () => {
+    lastWaxUtil = computeWaxUtilCosts();
+    calculate();
+    tabBtns.forEach(b => b.classList.toggle('is-active', b.dataset.tab === 'cost'));
+    Object.entries(tabPanels).forEach(([k, p]) => { p.hidden = k !== 'cost'; });
+    const total = lastWaxUtil.waxCost + lastWaxUtil.utilCost + lastWaxUtil.soapCost + lastWaxUtil.fixCost + lastWaxUtil.softenerRsCost;
+    wuAddToCostNote.textContent = `Sent to Product Cost: ${fmt(total)} for ${lastWaxUtil.length} yd (wax, utility, soaping, fixing, softener).`;
+  });
 
   /* ===================== Tab switching ===================== */
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabPanels = {
     dye:  document.getElementById('tab-dye'),
-    soap: document.getElementById('tab-soap'),
     wax:  document.getElementById('tab-wax'),
     cost: document.getElementById('tab-cost'),
   };
@@ -1031,7 +1049,6 @@
 
   calcDye();
   calcJava();
-  calcSoap();
   calculate();
 </script>
 </body>
