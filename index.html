@@ -342,7 +342,7 @@
       <div class="card">
         <p class="section-eyebrow">Shade <span style="font-weight:400; text-transform:none; letter-spacing:0;">— pick a colour, amounts scale to your cloth</span></p>
         <div class="swatch-grid" id="dbSwatches"></div>
-        <p class="note">Colours are approximate on-screen samples. Each recipe's dye percentages are on weight of fabric (0.25% = 0.25 g per 100 g). Select one and the recipe panel gives the milligrams to weigh out for the fabric weight above.</p>
+        <p class="note">Colours are approximate on-screen samples, shared with Java batik. Light green and Teal are named sheet recipes with fixed dye percentages on weight of fabric (0.25% = 0.25 g per 100 g), regardless of the shade depth above; picking a single dye instead uses the Depth of shade % as its dosing. Select one and the recipe panel gives the milligrams to weigh out for the fabric weight above.</p>
       </div>
 
       <div class="card">
@@ -376,7 +376,7 @@
       <div class="card">
         <p class="section-eyebrow">Shade <span style="font-weight:400; text-transform:none; letter-spacing:0;">— pick a colour, amounts scale to your cloth</span></p>
         <div class="swatch-grid" id="jbSwatches"></div>
-        <p class="note">Colours are approximate on-screen samples, from the same dye list as water bath. Per yard: 4 mg urea, 20 ml sodium silicate, and dye at the sheet's urea&nbsp;:&nbsp;dye = 2&nbsp;:&nbsp;6 ratio — dye is 3&times; the urea weight. Java batik doesn't depend on fabric type — only the yards set above drive these amounts.</p>
+        <p class="note">Colours are approximate on-screen samples — the same Shade picker as water bath. Per yard: 4 mg urea, 20 ml sodium silicate, and dye at the sheet's urea&nbsp;:&nbsp;dye = 2&nbsp;:&nbsp;6 ratio — dye is 3&times; the urea weight. For Light green or Teal, that dye weight is split between the two dyes using the sheet's percentage ratio. Java batik doesn't depend on fabric type — only the yards set above drive these amounts.</p>
       </div>
 
     </div>
@@ -461,18 +461,18 @@
     ['Blue 2GF', 450], ['Red Purple', 490], ['Dark Red', 500], ['Rose 6B', 500],
     ['Brill Blue', 1800], ['Black', 350], ['Navy Blue GG', 650], ['Yellow CD', 300],
     ['Red CD', 370], ['Blue CD', 550], ['Orange F2R', 330], ['Green 4B', 480],
-    ['Brown', 320], ['Teal Blue G 266%', 380],
+    ['Brown', 320], ['Turq Blue G 226%', 380],
   ];
 
-  // Approximate on-screen swatch colours for each individual dye above — used by
-  // Java batik's single-dye picker, which reuses the same dye list as water bath.
+  // Approximate on-screen swatch colours for each individual dye above — this list
+  // is shared by both dyeing methods' "Shade" pickers (see SHADES below).
   const DYE_SWATCH = {
     'Yellow 4GL': '#e6c229', 'Red 3BF': '#c0392b', 'Scarlet 2G': '#e0271c',
     'Yellow 3RF': '#f1c40f', 'Blue 2GF': '#2e6fd6', 'Red Purple': '#8e2a6b',
     'Dark Red': '#7a1220', 'Rose 6B': '#d6558a', 'Brill Blue': '#1560d4',
     'Black': '#1b1b1b', 'Navy Blue GG': '#1b2a52', 'Yellow CD': '#f4d13d',
     'Red CD': '#b8332f', 'Blue CD': '#3562b0', 'Orange F2R': '#e0762b',
-    'Green 4B': '#3f8f4f', 'Brown': '#6b4226', 'Teal Blue G 266%': '#1c8ca3',
+    'Green 4B': '#3f8f4f', 'Brown': '#6b4226', 'Turq Blue G 226%': '#1c8ca3',
   };
 
   // Wax is mostly recovered/reused, so this is a suggested per-batch top-up, not a full kg.
@@ -519,7 +519,11 @@
   // Cost's coloring cost is the sum across every session of each kind, not a single
   // snapshot. Persisted per browser; cleared when a new product session starts.
   let waterBathSessions = lsGet('sethuWaterSessions', []);
-  let javaBatikSessions = lsGet('sethuJavaSessions', []);
+  // Older sessions saved before Java batik supported multi-dye shades used a single
+  // { dyeName, dyeMg } pair instead of a dyes[] array — normalize on load.
+  let javaBatikSessions = lsGet('sethuJavaSessions', []).map(s => s.dyes ? s : {
+    yards: s.yards, silicateMl: s.silicateMl, ureaMg: s.ureaMg, dyes: [[s.dyeName, s.dyeMg]],
+  });
 
   const fmt = n => 'Rs ' + Math.round(n).toLocaleString('en-US');
   // Whole-rupee rounding hides genuinely tiny ingredient costs (e.g. a few mg of
@@ -616,7 +620,7 @@
     // Java batik: sum dye + sodium silicate + urea separately, across every session.
     let javaDyeCost = 0, javaSilicateCost = 0, javaUreaCost = 0;
     javaBatikSessions.forEach(s => {
-      javaDyeCost += dyeCostFor(s.dyeName, s.dyeMg);
+      s.dyes.forEach(([name, mg]) => { javaDyeCost += dyeCostFor(name, mg); });
       javaSilicateCost += (s.silicateMl / 1000) * JAVA_PRICE;
       javaUreaCost += (s.ureaMg / 1000000) * UREA_PRICE; // mg -> kg
     });
@@ -716,14 +720,19 @@
   const ACETIC_G_PER_L = 0.75;         // neutralizing
   const SOAP_G_PER_L = 1;              // Bilvitan DPS — soaping
 
-  // Shade recipes captured from the dye sample sheets.
-  // dyes: [name, % on weight of fabric]  (0.25% = 0.25 g per 100 g cloth)
-  // swatch: approximate on-screen colour.
-  const SHADE_RECIPES = [
+  // Shade picker — shared by Water bath and Java batik, since both mix from the
+  // same dye list. Two entries are named multi-dye recipes captured from the dye
+  // sample sheets (dyes: [name, % on weight of fabric], e.g. 0.25% = 0.25 g per
+  // 100 g cloth); the rest are the individual dyes, one swatch each. `single`
+  // marks those — Water bath doses a single dye at the chosen Depth of shade %
+  // instead of a fixed sheet %, and Java batik gives its whole computed dye
+  // weight to it instead of splitting by sheet ratio.
+  const SHADES = [
     { id:'03', label:'Light green', swatch:'#a9d6a0',
-      dyes:[ ['Intracron Yellow 4GL', 0.25], ['Intracron Turq Blue G 266%', 1.00] ] },
+      dyes:[ ['Yellow 4GL', 0.25], ['Turq Blue G 226%', 1.00] ] },
     { id:'04', label:'Teal', swatch:'#1c8ca3',
-      dyes:[ ['Intracron Yellow 4GL', 0.26], ['Intracron Turq Blue G 266%', 2.40] ] },
+      dyes:[ ['Yellow 4GL', 0.26], ['Turq Blue G 226%', 2.40] ] },
+    ...DYES.map(([name]) => ({ id:name, label:name, swatch: DYE_SWATCH[name] || '#999', single:true, dyes:[ [name, null] ] })),
   ];
 
   // grams per level spoon, from the Easy Weighting sheet
@@ -750,6 +759,31 @@
     return `<div class="ledger-row${dim ? ' dim' : ''}"><span class="label">${label}</span><span class="amt">${amountStr}</span></div>`;
   }
 
+  // Renders the shared SHADES list into a swatch grid — used identically by both
+  // Water bath's and Java batik's "Shade" pickers. Each method keeps its own
+  // selection state and its own onChange recalculation.
+  function buildShadePicker(container, getSelected, setSelected, onChange){
+    SHADES.forEach(r => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'swatch';
+      btn.dataset.id = r.id;
+      const recap = r.single
+        ? `Rs ${DYE_PRICE[r.dyes[0][0]]}/100g`
+        : r.dyes.map(([n, p]) => `${n} ${p.toFixed(2)}%`).join('<br>');
+      const heading = r.single ? r.label : `${r.id} · ${r.label}`;
+      btn.innerHTML = `<span class="chip" style="background:${r.swatch}"></span>
+        <span class="cap"><b>${heading}</b><br>${recap}</span>`;
+      btn.addEventListener('click', () => {
+        const next = getSelected() === r.id ? null : r.id;
+        setSelected(next);
+        container.querySelectorAll('.swatch').forEach(s => s.classList.toggle('is-sel', s.dataset.id === next));
+        onChange();
+      });
+      container.appendChild(btn);
+    });
+  }
+
   const recipeYards = document.getElementById('recipeYards');
   const dbDepth    = document.getElementById('dbDepth');
   const dbGPerYard = document.getElementById('dbGPerYard');
@@ -765,22 +799,8 @@
     dbChartBody.appendChild(tr);
   });
 
-  let selectedShade = null;
-  SHADE_RECIPES.forEach(r => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'swatch';
-    btn.dataset.id = r.id;
-    const recap = r.dyes.map(([n, p]) => `${n.replace(/^Intracron /, '')} ${p.toFixed(2)}%`).join('<br>');
-    btn.innerHTML = `<span class="chip" style="background:${r.swatch}"></span>
-      <span class="cap"><b>${r.id} · ${r.label}</b><br>${recap}</span>`;
-    btn.addEventListener('click', () => {
-      selectedShade = selectedShade === r.id ? null : r.id;
-      dbSwatches.querySelectorAll('.swatch').forEach(s => s.classList.toggle('is-sel', s.dataset.id === selectedShade));
-      calcDye();
-    });
-    dbSwatches.appendChild(btn);
-  });
+  let selectedWaterShade = null;
+  buildShadePicker(dbSwatches, () => selectedWaterShade, v => selectedWaterShade = v, calcDye);
 
   function calcDye(){
     const fabricType = globalFabricType.value;
@@ -804,15 +824,26 @@
     });
 
     let dyeRows = '';
-    const recipe = SHADE_RECIPES.find(r => r.id === selectedShade);
+    let recipeDyes = [];
+    const recipe = SHADES.find(r => r.id === selectedWaterShade);
     if (recipe && weight > 0) {
-      dyeRows += ledStr(`<b>Shade ${recipe.id} — ${recipe.label}</b>`, `for ${gfmt(weight)}`);
-      recipe.dyes.forEach(([name, pct]) => {
-        const mg = weight * pct * 10;                 // weight(g) × pct/100 × 1000
-        dyeRows += ledStr(`${name} — ${pct.toFixed(2)}%`, gAmt(mg), true);
-      });
+      const heading = recipe.single ? recipe.label : `${recipe.id} — ${recipe.label}`;
+      dyeRows += ledStr(`<b>Shade — ${heading}</b>`, `for ${gfmt(weight)}`);
+      if (recipe.single) {
+        const pct = parseFloat(depth) || 0;            // no sheet % for a single dye — use the chosen shade depth
+        const [name] = recipe.dyes[0];
+        const mg = weight * pct * 10;
+        dyeRows += ledStr(`${name} — ${pct.toFixed(2)}% (shade depth)`, gAmt(mg), true);
+        recipeDyes = [[name, mg]];
+      } else {
+        recipe.dyes.forEach(([name, pct]) => {
+          const mg = weight * pct * 10;                 // weight(g) × pct/100 × 1000
+          dyeRows += ledStr(`${name} — ${pct.toFixed(2)}%`, gAmt(mg), true);
+          recipeDyes.push([name, mg]);
+        });
+      }
     } else if (recipe) {
-      dyeRows = ledStr(`Shade ${recipe.id} — ${recipe.label}`, 'set the yards above', true);
+      dyeRows = ledStr(`Shade — ${recipe.label}`, 'set the yards above', true);
     } else {
       dyeRows = ledStr('No shade selected', 'pick a colour', true);
     }
@@ -834,7 +865,7 @@
     // Keep the last calculation around so "Add to design" can hand it to the other tabs.
     lastRecipe = {
       fabricType, yards, weight, water, saltG, causticG, aceticG,
-      dyes: recipe ? recipe.dyes.map(([name, pct]) => [name, weight * pct * 10]) : [], // mg
+      dyes: recipeDyes, // mg
     };
   }
 
@@ -881,21 +912,8 @@
   const jbSwatches = document.getElementById('jbSwatches');
   const jbLedger = document.getElementById('jbLedger');
 
-  let selectedJavaDye = null;
-  DYES.forEach(([name, price]) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'swatch';
-    btn.dataset.id = name;
-    btn.innerHTML = `<span class="chip" style="background:${DYE_SWATCH[name] || '#999'}"></span>
-      <span class="cap"><b>${name}</b><br>Rs ${price}/100g</span>`;
-    btn.addEventListener('click', () => {
-      selectedJavaDye = selectedJavaDye === name ? null : name;
-      jbSwatches.querySelectorAll('.swatch').forEach(s => s.classList.toggle('is-sel', s.dataset.id === selectedJavaDye));
-      calcJava();
-    });
-    jbSwatches.appendChild(btn);
-  });
+  let selectedJavaShade = null;
+  buildShadePicker(jbSwatches, () => selectedJavaShade, v => selectedJavaShade = v, calcJava);
 
   let lastJavaRecipe = null;
   function calcJava(){
@@ -903,20 +921,31 @@
     const waterMl = yards * JAVA_WATER_ML_PER_YARD;
     const silicateMl = yards * JAVA_ML_PER_YARD;
     const ureaMg = yards * JAVA_UREA_MG_PER_YARD;
-    const dyeMg = ureaMg * (JAVA_DYE_RATIO / JAVA_UREA_RATIO);
-    const dyeName = selectedJavaDye;
+    const totalDyeMg = ureaMg * (JAVA_DYE_RATIO / JAVA_UREA_RATIO);
+    const shade = SHADES.find(r => r.id === selectedJavaShade);
 
     let html = '';
     html += ledStr('Fabric', `${yards} yd`);
     html += ledStr(`Water — ${JAVA_WATER_ML_PER_YARD} ml/yd`, mlfmt(waterMl));
     html += ledStr(`Sodium silicate — ${JAVA_ML_PER_YARD} ml/yd`, mlfmt(silicateMl), true);
     html += ledStr(`Urea — ${JAVA_UREA_MG_PER_YARD} mg/yd`, gAmt(ureaMg), true);
-    html += dyeName
-      ? ledStr(`${dyeName} — urea : dye 2 : 6`, gAmt(dyeMg), true)
-      : ledStr('Dye', 'pick a colour above', true);
+
+    let dyes = [];
+    if (shade && shade.single) {
+      const [name] = shade.dyes[0];
+      dyes = [[name, totalDyeMg]];
+      html += ledStr(`${name} — urea : dye 2 : 6`, gAmt(totalDyeMg), true);
+    } else if (shade) {
+      const pctSum = shade.dyes.reduce((sum, [, pct]) => sum + pct, 0);
+      dyes = shade.dyes.map(([name, pct]) => [name, totalDyeMg * (pct / pctSum)]);
+      html += ledStr(`<b>Shade — ${shade.id} · ${shade.label}</b>`, 'urea : dye 2 : 6, split by sheet ratio');
+      dyes.forEach(([name, mg]) => { html += ledStr(name, gAmt(mg), true); });
+    } else {
+      html += ledStr('Dye', 'pick a colour above', true);
+    }
     jbLedger.innerHTML = html;
 
-    lastJavaRecipe = { yards, waterMl, silicateMl, ureaMg, dyeMg, dyeName };
+    lastJavaRecipe = { yards, waterMl, silicateMl, ureaMg, dyes };
   }
 
   const jbAddToDesign = document.getElementById('jbAddToDesign');
@@ -926,7 +955,7 @@
       jbAddToDesignNote.textContent = 'Set the yards above first.';
       return;
     }
-    if (!lastJavaRecipe.dyeName) {
+    if (!lastJavaRecipe.dyes.length) {
       jbAddToDesignNote.textContent = 'Pick a colour above first.';
       return;
     }
@@ -935,7 +964,7 @@
     // the same piece of fabric may go through Java batik more than once.
     javaBatikSessions.push({
       yards: lastJavaRecipe.yards, silicateMl: lastJavaRecipe.silicateMl,
-      ureaMg: lastJavaRecipe.ureaMg, dyeName: lastJavaRecipe.dyeName, dyeMg: lastJavaRecipe.dyeMg,
+      ureaMg: lastJavaRecipe.ureaMg, dyes: lastJavaRecipe.dyes,
     });
     lsSet('sethuJavaSessions', javaBatikSessions);
 
@@ -943,7 +972,8 @@
     tabBtns.forEach(b => b.classList.toggle('is-active', b.dataset.tab === 'cost'));
     Object.entries(tabPanels).forEach(([k, p]) => { p.hidden = k !== 'cost'; });
 
-    jbAddToDesignNote.textContent = `Logged Java batik session ${javaBatikSessions.length}: ${lastJavaRecipe.yards} yd, ${lastJavaRecipe.dyeName}.`;
+    const dyeNames = lastJavaRecipe.dyes.map(([name]) => name).join(', ');
+    jbAddToDesignNote.textContent = `Logged Java batik session ${javaBatikSessions.length}: ${lastJavaRecipe.yards} yd, ${dyeNames}.`;
   });
 
   // One shared yards field drives both Water bath and Java batik, and Product Cost /
