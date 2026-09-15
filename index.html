@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sethu Cost Calculator</title>
+<title>Sethu Dashboard</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -185,11 +185,36 @@
   <header>
     <div>
       <p class="brand-eyebrow">Sethu &middot; batik costing</p>
-      <h1>Product Cost Calculator</h1>
-      <p>Pulls unit prices straight from the Sethu cost sheet — pick a material, log what a piece actually used, and get a costed retail price.</p>
+      <h1>Sethu Dashboard</h1>
+      <p class="sheet-tag" id="lastUpdatedTag" style="display:inline-block; margin-top:0.6rem;">Last updated prices - 15/09/2026</p>
     </div>
-    <span class="sheet-tag">rates as of Aug 2026</span>
   </header>
+
+  <div class="card" style="margin-bottom:1.75rem;">
+    <p class="section-eyebrow">This session's fabric</p>
+    <div class="field-row cols-3">
+      <div class="field">
+        <label for="globalFabricType">Fabric type</label>
+        <select id="globalFabricType">
+          <option value="Super Voil">Super Voil</option>
+          <option value="Modal Silk">Modal Silk</option>
+          <option value="Cotton">Cotton</option>
+          <option value="Rayon">Rayon</option>
+          <option value="Viscose">Viscose</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="recipeYards">Fabric (yards)</label>
+        <input type="number" id="recipeYards" min="0" step="0.25" value="3">
+      </div>
+      <div class="field">
+        <label>Product reference</label>
+        <p id="productRef" style="margin:0; padding:0.5rem 0.65rem; font-family:'IBM Plex Mono', monospace; font-weight:600; color:var(--accent); background:var(--surface-2); border:1px solid var(--line); border-radius:7px;"></p>
+      </div>
+    </div>
+    <p class="note" id="viscoseWarning" style="display:none;">Viscose has no price, wax or weight data yet — anything involving it will show as Rs 0 / blank until that's supplied.</p>
+    <p class="note">Fabric type and yards stay the same for as long as you're processing this piece of fabric — shared by Calculate Recipe, Wax &amp; Utility and Product Cost, so they aren't asked for again on those tabs. Every batik made here is in‑house, so the reference always reads <b>SE‑IN‑&lt;material&gt;‑####</b>. Picking a new fabric type mints a fresh reference automatically; <button class="reset-btn" id="newProductBtn" type="button">new product</button> gets you another one for the same fabric type.</p>
+  </div>
 
   <nav class="tabs">
     <button type="button" class="tab-btn is-active" data-tab="dye">Calculate Recipe</button>
@@ -203,22 +228,11 @@
 
       <div class="card">
         <p class="section-eyebrow">Material &amp; fabric</p>
-        <div class="field-row">
-          <div class="field">
-            <label for="material">Material</label>
-            <select id="material">
-              <option value="Super Voil">Super Voil — Rs 425/yd</option>
-              <option value="Modal Silk">Modal Silk — Rs 1,000/yd</option>
-              <option value="Cotton">Cotton — Rs 425/yd</option>
-              <option value="Rayon">Rayon — Rs 700/yd</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="length">Fabric used (yards)</label>
-            <input type="number" id="length" min="0" step="0.1" value="2" disabled>
-          </div>
+        <div class="field">
+          <label for="length">Fabric used (yards)</label>
+          <input type="number" id="length" min="0" step="0.1" value="2" disabled>
         </div>
-        <p class="note">Fabric used comes from the yards set on <b>Calculate Recipe</b> — shared between Water bath and Java batik, so it isn't re-entered here. Wax, chemicals, and utility (gas + water) are set up in the <b>Wax &amp; Utility</b> tab, using this same yardage — their cost still folds into the total below.</p>
+        <p class="note">Material and fabric used come from the fabric type and yards set above / on <b>Calculate Recipe</b> — not re-entered here. Wax, chemicals, and utility (gas + water) are set up in the <b>Wax &amp; Utility</b> tab, using this same yardage — their cost still folds into the total below.</p>
       </div>
 
       <div class="card">
@@ -286,8 +300,28 @@
           <p class="price" id="retailPrice">Rs 0</p>
           <p class="sub" id="retailSub"></p>
         </div>
+
+        <button type="button" class="cta-btn" id="saveProductBtn">Save this product →</button>
+        <p class="note" id="saveProductNote" style="margin-top:0.6rem;"></p>
       </div>
     </div>
+  </div>
+
+  <div class="card" style="margin-top:1.75rem;">
+    <p class="section-eyebrow">Saved products <span style="font-weight:400; text-transform:none; letter-spacing:0;">— logged in this browser</span></p>
+    <div style="overflow-x:auto;">
+      <table class="chart-table" id="productLogTable">
+        <thead>
+          <tr>
+            <th>Reference</th><th>Material</th><th>Yards</th><th>Cost</th><th>Profit</th>
+            <th>Selling price</th><th>Rounded</th><th>Total profit</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="productLogBody"></tbody>
+      </table>
+    </div>
+    <p class="note" id="productLogEmpty">Nothing saved yet — click "Save this product" above once a product's costed out.</p>
+    <p class="note">Not wired up to the Google Sheet yet — "copy" puts the row on your clipboard as a tab‑separated line, ready to paste in as a new row there.</p>
   </div>
   </div>
 
@@ -305,11 +339,7 @@
         <span>Java batik</span>
       </label>
     </div>
-    <div class="field" style="margin-top:1rem;">
-      <label for="recipeYards">Fabric (yards)</label>
-      <input type="number" id="recipeYards" min="0" step="0.25" value="3">
-    </div>
-    <p class="note">Shared between Water bath and Java batik — it's the same piece of fabric, however it ends up coloured.</p>
+    <p class="note">Shared between Water bath and Java batik — it's the same piece of fabric (type and yards set above), however it ends up coloured.</p>
   </div>
 
   <div id="dbWaterPanel" class="layout">
@@ -317,29 +347,18 @@
 
       <div class="card">
         <p class="section-eyebrow">Batch &amp; shade</p>
-        <div class="field-row">
-          <div class="field">
-            <label for="dbFabricType">Fabric type</label>
-            <select id="dbFabricType">
-              <option value="Super Voil">Super Voil</option>
-              <option value="Modal Silk">Modal Silk</option>
-              <option value="Rayon">Rayon</option>
-              <option value="Cotton">100% Cotton</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="dbDepth">Depth of shade (%)</label>
-            <select id="dbDepth">
-              <option value="1">1% — pale</option>
-              <option value="2" selected>2%</option>
-              <option value="3">3%</option>
-              <option value="4">4%</option>
-              <option value="5">5%</option>
-              <option value="6">6% or deeper</option>
-            </select>
-          </div>
+        <div class="field">
+          <label for="dbDepth">Depth of shade (%)</label>
+          <select id="dbDepth">
+            <option value="1">1% — pale</option>
+            <option value="2" selected>2%</option>
+            <option value="3">3%</option>
+            <option value="4">4%</option>
+            <option value="5">5%</option>
+            <option value="6">6% or deeper</option>
+          </select>
         </div>
-        <p class="note">Fabric weight isn't typed in — it's worked out from the type and yards (<span id="dbGPerYard"></span>), shown at the top of the recipe panel.</p>
+        <p class="note">Fabric weight isn't typed in — it's worked out from the fabric type above and yards (<span id="dbGPerYard"></span>), shown at the top of the recipe panel.</p>
         <table class="chart-table" id="dbChart">
           <thead><tr><th>Depth %</th><th>Glauber salt</th><th>Caustic soda</th></tr></thead>
           <tbody></tbody>
@@ -421,25 +440,14 @@
 
         <div class="card">
           <p class="section-eyebrow">Wax</p>
-          <div class="field-row">
-            <div class="field">
-              <label for="wuMaterial">Fabric</label>
-              <select id="wuMaterial">
-                <option value="Super Voil">Super Voil</option>
-                <option value="Modal Silk">Modal Silk</option>
-                <option value="Cotton">Cotton</option>
-                <option value="Rayon">Rayon</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="waxTopUp">Wax top‑up (Rs / batch)</label>
-              <div class="margin-input-wrap">
-                <input type="number" id="waxTopUp" min="0" step="5" value="225">
-                <button class="reset-btn" id="resetWax" type="button">suggested</button>
-              </div>
+          <div class="field">
+            <label for="waxTopUp">Wax top‑up (Rs / batch)</label>
+            <div class="margin-input-wrap">
+              <input type="number" id="waxTopUp" min="0" step="5" value="225">
+              <button class="reset-btn" id="resetWax" type="button">suggested</button>
             </div>
           </div>
-          <p class="note">The wax blend — and its cost — depends on the fabric: ~180g/batch (20g/yd over a 9yd batch). Super Voil &amp; Cotton split ~50% paraffin / 35% bee wax / 15% gum rosin (Rs 800 / 2,000 / 1,000 per kg); Modal Silk &amp; Rayon are paraffin‑only (Rs 800/kg). Kept in sync with Product Cost's material.</p>
+          <p class="note">The wax blend — and its cost — depends on the fabric type set above: ~180g/batch (20g/yd over a 9yd batch). Super Voil &amp; Cotton split ~50% paraffin / 35% bee wax / 15% gum rosin (Rs 800 / 2,000 / 1,000 per kg); Modal Silk &amp; Rayon are paraffin‑only (Rs 800/kg).</p>
         </div>
 
         <div class="card">
@@ -523,6 +531,13 @@
   // tab's fields (mirrors how "Add to design" works for Calculate Recipe).
   let lastWaxUtil = { waxCost: 0, utilCost: 0, soapCost: 0, fixCost: 0, softenerRsCost: 0 };
 
+  // Product reference: SE-<method>-<material code>-<sequence>, e.g. SE-IN-MS-0001.
+  // The sequence counts per material (its own MS/CT/RO/SV/VS counter), persisted in
+  // this browser's localStorage — there's no shared backend yet.
+  const MATERIAL_CODE = { 'Super Voil': 'SV', 'Modal Silk': 'MS', 'Cotton': 'CT', 'Rayon': 'RO', 'Viscose': 'VS' };
+  const lsGet = (key, fallback) => { try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v); } catch { return fallback; } };
+  const lsSet = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} };
+
   const fmt = n => 'Rs ' + Math.round(n).toLocaleString('en-US');
 
   const dyeList = document.getElementById('dyeList');
@@ -537,7 +552,10 @@
   const waxTopUp = document.getElementById('waxTopUp');
   const resetWaxBtn = document.getElementById('resetWax');
 
-  const materialSelect = document.getElementById('material');
+  const globalFabricType = document.getElementById('globalFabricType');
+  const productRef = document.getElementById('productRef');
+  const newProductBtn = document.getElementById('newProductBtn');
+  const viscoseWarning = document.getElementById('viscoseWarning');
   const lengthInput = document.getElementById('length');
   const styleWater = document.getElementById('styleWater');
   const styleJava = document.getElementById('styleJava');
@@ -557,7 +575,7 @@
   const retailSub = document.getElementById('retailSub');
 
   dyeList.querySelectorAll('.dye-qty').forEach(el => el.addEventListener('input', calculate));
-  [materialSelect, lengthInput, javaQty, javaUrea, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp]
+  [lengthInput, javaQty, javaUrea, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp]
     .forEach(el => el.addEventListener('input', calculate));
   styleJava.addEventListener('change', () => {
     javaQtyWrap.style.display = styleJava.checked ? 'block' : 'none';
@@ -565,20 +583,13 @@
   });
   styleWater.addEventListener('change', calculate);
 
-  materialSelect.addEventListener('change', () => {
-    marginInput.value = DEFAULT_MARGIN[materialSelect.value];
-    waxTopUp.value = DEFAULT_WAX_TOPUP[materialSelect.value];
-    wuMaterial.value = materialSelect.value;
-    calculate();
-  });
-
   resetMarginBtn.addEventListener('click', () => {
-    marginInput.value = DEFAULT_MARGIN[materialSelect.value];
+    marginInput.value = DEFAULT_MARGIN[globalFabricType.value] || 0;
     calculate();
   });
 
   resetWaxBtn.addEventListener('click', () => {
-    waxTopUp.value = DEFAULT_WAX_TOPUP[materialSelect.value];
+    waxTopUp.value = DEFAULT_WAX_TOPUP[globalFabricType.value] || 0;
     calculate();
   });
 
@@ -587,9 +598,9 @@
   }
 
   function calculate(){
-    const material = materialSelect.value;
+    const material = globalFabricType.value;
     const length = Math.max(0, parseFloat(lengthInput.value) || 0);
-    const materialCost = MATERIALS[material] * length;
+    const materialCost = (MATERIALS[material] || 0) * length;
 
     let dyeCost = 0;
     dyeList.querySelectorAll('.dye-qty').forEach(el => {
@@ -643,19 +654,26 @@
     const margin = Math.max(0, parseFloat(marginInput.value) || 0);
     const grossMargin = margin / (100 + margin) * 100;
     const retail = totalCost * (1 + margin / 100);
-    const retailRounded = Math.round(retail / 10) * 10;
+    const retailRounded = Math.ceil(retail / 10) * 10;   // always UP to the next Rs 10 — 1344 -> 1350
     const profit = retail - totalCost;
+    const totalProfit = retailRounded - totalCost;        // what's actually pocketed after rounding up
 
-    marginNote.innerHTML = `Profit: <b>${fmt(profit)}</b> (≈ ${grossMargin.toFixed(1)}% gross margin). Sheet default for ${material}: ${DEFAULT_MARGIN[material]}% markup.`;
+    const marginDefault = DEFAULT_MARGIN[material];
+    marginNote.innerHTML = `Profit: <b>${fmt(profit)}</b> (≈ ${grossMargin.toFixed(1)}% gross margin)`
+      + (marginDefault != null ? `. Sheet default for ${material}: ${marginDefault}% markup.` : '.');
     retailPrice.textContent = fmt(retailRounded);
-    retailSub.textContent = `Exact: ${fmt(retail)} (cost ${fmt(totalCost)} + profit ${fmt(profit)}) · rounded to nearest Rs 10`;
+    retailSub.textContent = `Exact: ${fmt(retail)} (cost ${fmt(totalCost)} + profit ${fmt(profit)}) · rounded up to next Rs 10 · total profit ${fmt(totalProfit)}`;
+
+    lastCostSummary = { material, length, totalCost, profit, sellingPrice: retail, roundedSellingPrice: retailRounded, totalProfit };
 
     calcWaxUtil();
   }
 
+  let lastCostSummary = null;
+
   javaQtyWrap.style.display = 'none';
-  marginInput.value = DEFAULT_MARGIN[materialSelect.value];
-  waxTopUp.value = DEFAULT_WAX_TOPUP[materialSelect.value];
+  marginInput.value = DEFAULT_MARGIN[globalFabricType.value] || 0;
+  waxTopUp.value = DEFAULT_WAX_TOPUP[globalFabricType.value] || 0;
 
   /* ===================== Calculate Recipe tab ===================== */
   const dbModeWater = document.getElementById('dbModeWater');
@@ -723,7 +741,6 @@
   }
 
   const recipeYards = document.getElementById('recipeYards');
-  const dbFabricType = document.getElementById('dbFabricType');
   const dbDepth    = document.getElementById('dbDepth');
   const dbGPerYard = document.getElementById('dbGPerYard');
   const dbChartBody = document.querySelector('#dbChart tbody');
@@ -756,11 +773,13 @@
   });
 
   function calcDye(){
-    const fabricType = dbFabricType.value;
-    const gPerYard = FABRIC_G_PER_YARD[fabricType];
+    const fabricType = globalFabricType.value;
+    const gPerYard = FABRIC_G_PER_YARD[fabricType] || 0;
     const yards  = Math.max(0, parseFloat(recipeYards.value) || 0);
     const weight = yards * gPerYard;                                      // grams of cloth, derived
-    dbGPerYard.textContent = `${gPerYard.toFixed(1)} g/yd for ${fabricType}`;
+    dbGPerYard.textContent = gPerYard
+      ? `${gPerYard.toFixed(1)} g/yd for ${fabricType}`
+      : `no weight data for ${fabricType} yet`;
 
     const depth  = dbDepth.value;
     const chart  = SALT_CAUSTIC[depth];
@@ -809,7 +828,7 @@
     };
   }
 
-  [dbFabricType, dbDepth].forEach(el => el.addEventListener('input', calcDye));
+  dbDepth.addEventListener('input', calcDye);
 
   // Matches a shade recipe's dye name to a Product Cost dye row — names carry an
   // "Intracron " brand prefix and one known spelling difference (Turq/Teal).
@@ -834,11 +853,8 @@
 
     const notes = [];
 
-    if (MATERIALS[lastRecipe.fabricType] != null) {
-      materialSelect.value = lastRecipe.fabricType;
-      materialSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    } else {
-      notes.push(`${lastRecipe.fabricType} isn't priced in Product Cost yet, so material was left as-is`);
+    if (MATERIALS[lastRecipe.fabricType] == null) {
+      notes.push(`${lastRecipe.fabricType} isn't priced in Product Cost yet`);
     }
 
     styleWater.checked = true;
@@ -951,7 +967,6 @@
   });
 
   /* ===================== Wax & Utility ===================== */
-  const wuMaterial = document.getElementById('wuMaterial');
   const wuLedger = document.getElementById('wuLedger');
 
   // Salt/caustic/acetic from the dye bath itself are precise for this exact piece
@@ -964,12 +979,6 @@
                + (lastDesign.aceticG / 1000) * ACETIC_PRICE_PER_KG;
     return { cost, yards: lastDesign.yards };
   }
-
-  wuMaterial.value = materialSelect.value;
-  wuMaterial.addEventListener('change', () => {
-    materialSelect.value = wuMaterial.value;
-    materialSelect.dispatchEvent(new Event('change', { bubbles: true }));
-  });
 
   const wuSoapFixLedger = document.getElementById('wuSoapFixLedger');
   const wuAddToCost = document.getElementById('wuAddToCost');
@@ -1027,6 +1036,116 @@
     const total = lastWaxUtil.waxCost + lastWaxUtil.utilCost + lastWaxUtil.soapCost + lastWaxUtil.fixCost + lastWaxUtil.softenerRsCost;
     wuAddToCostNote.textContent = `Sent to Product Cost: ${fmt(total)} for ${lastWaxUtil.length} yd (wax, utility, soaping, fixing, softener).`;
   });
+
+  /* ===================== Session & product reference ===================== */
+  // Every batik made here is in-house, so the method segment is always "IN" — the only
+  // thing that changes the reference is the fabric type.
+  function updateViscoseWarning(){
+    viscoseWarning.style.display = globalFabricType.value === 'Viscose' ? 'block' : 'none';
+  }
+
+  function mintRef(material){
+    const code = MATERIAL_CODE[material] || 'XX';
+    const counters = lsGet('sethuCounters', {});
+    counters[code] = (counters[code] || 0) + 1;
+    lsSet('sethuCounters', counters);
+    return `SE-IN-${code}-${String(counters[code]).padStart(4, '0')}`;
+  }
+
+  let session = lsGet('sethuSession', null);
+
+  // Changing fabric type always mints a fresh reference — it's a new piece of fabric,
+  // i.e. a new session. "New product" forces a fresh one for the same fabric type.
+  function ensureSession(forceNew){
+    const material = globalFabricType.value;
+    if (forceNew || !session || session.material !== material) {
+      session = { material, ref: mintRef(material) };
+    }
+    lsSet('sethuSession', session);
+    productRef.textContent = session.ref;
+    updateViscoseWarning();
+  }
+
+  if (session && MATERIAL_CODE[session.material]) {
+    globalFabricType.value = session.material;
+    productRef.textContent = session.ref;
+    marginInput.value = DEFAULT_MARGIN[session.material] || 0;
+    waxTopUp.value = DEFAULT_WAX_TOPUP[session.material] || 0;
+    updateViscoseWarning();
+  } else {
+    ensureSession(true);
+  }
+
+  globalFabricType.addEventListener('change', () => {
+    ensureSession(false);
+    marginInput.value = DEFAULT_MARGIN[globalFabricType.value] || 0;
+    waxTopUp.value = DEFAULT_WAX_TOPUP[globalFabricType.value] || 0;
+    calcDye();
+    calculate();
+  });
+  newProductBtn.addEventListener('click', () => ensureSession(true));
+
+  /* ===================== Saved products log ===================== */
+  const productLogBody = document.getElementById('productLogBody');
+  const productLogEmpty = document.getElementById('productLogEmpty');
+  const saveProductBtn = document.getElementById('saveProductBtn');
+  const saveProductNote = document.getElementById('saveProductNote');
+
+  function renderProductLog(){
+    const rows = lsGet('sethuProductLog', []);
+    productLogEmpty.style.display = rows.length ? 'none' : 'block';
+    productLogBody.innerHTML = rows.map((r, i) => `
+      <tr>
+        <td>${r.ref}</td><td>${r.material}</td><td>${r.yards}</td>
+        <td>${fmt(r.cost)}</td><td>${fmt(r.profit)}</td>
+        <td>${fmt(r.sellingPrice)}</td><td>${fmt(r.roundedSellingPrice)}</td><td>${fmt(r.totalProfit)}</td>
+        <td>
+          <button class="reset-btn" type="button" data-copy="${i}">copy</button>
+          <button class="reset-btn" type="button" data-del="${i}">delete</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  productLogBody.addEventListener('click', (e) => {
+    const rows = lsGet('sethuProductLog', []);
+    if (e.target.dataset.copy != null) {
+      const r = rows[+e.target.dataset.copy];
+      const line = [r.ref, r.material, r.yards, Math.round(r.cost), Math.round(r.profit),
+        Math.round(r.sellingPrice), Math.round(r.roundedSellingPrice), Math.round(r.totalProfit)].join('\t');
+      navigator.clipboard?.writeText(line).then(
+        () => { saveProductNote.textContent = `Copied ${r.ref} — paste it as a new row in the sheet.`; },
+        () => { saveProductNote.textContent = `Couldn't copy automatically — select and copy this row: ${line}`; }
+      );
+    } else if (e.target.dataset.del != null) {
+      rows.splice(+e.target.dataset.del, 1);
+      lsSet('sethuProductLog', rows);
+      renderProductLog();
+    }
+  });
+
+  saveProductBtn.addEventListener('click', () => {
+    if (!lastCostSummary || lastCostSummary.length <= 0) {
+      saveProductNote.textContent = 'Set a fabric length and cost it out first.';
+      return;
+    }
+    const rows = lsGet('sethuProductLog', []);
+    rows.push({
+      ref: productRef.textContent,
+      material: lastCostSummary.material,
+      yards: lastCostSummary.length,
+      cost: lastCostSummary.totalCost,
+      profit: lastCostSummary.profit,
+      sellingPrice: lastCostSummary.sellingPrice,
+      roundedSellingPrice: lastCostSummary.roundedSellingPrice,
+      totalProfit: lastCostSummary.totalProfit,
+      savedAt: new Date().toISOString(),
+    });
+    lsSet('sethuProductLog', rows);
+    renderProductLog();
+    saveProductNote.textContent = `Saved ${productRef.textContent} — ${fmt(lastCostSummary.roundedSellingPrice)} selling price.`;
+  });
+
+  renderProductLog();
 
   /* ===================== Tab switching ===================== */
   const tabBtns = document.querySelectorAll('.tab-btn');
