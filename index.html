@@ -463,10 +463,6 @@
           <p class="section-eyebrow">Soaping, fixing &amp; softener</p>
           <p class="section-eyebrow" style="font-size:0.66rem; color:var(--ink-soft); margin-bottom:0.6rem;">Assumption — 10 ml water per 3 yd</p>
           <div id="wuSoapFixLedger"></div>
-          <div class="field" style="margin-top:0.9rem;">
-            <label for="softenerPricePerL">Fabric softener price (Rs / L)</label>
-            <input type="number" id="softenerPricePerL" min="0" step="10" value="1200">
-          </div>
           <p class="note">Water needed scales with fabric used (yards): 3 yd → 10 ml, 6 yd → 20 ml, and so on; soaping, fixing and fabric softener are each dosed at 2&times; that water figure, priced at the sheet's Rs 550/L, Rs 700/L and Rs 1,200/L.</p>
         </div>
 
@@ -513,6 +509,7 @@
   const SOAPING_PRICE_PER_L = 550;   // Bilvitan DPS / soaping, sheet (a 2nd-stage soaping at ~Rs 400/L
                                       // isn't modeled — no precise dose is on file for that stage)
   const FIXING_PRICE_PER_L = 700;    // Felotra FIX, sheet
+  const SOFTENER_PRICE_PER_L = 1200; // Fabric softener, sheet
 
   // Soaping/fixing/acetic (this stage)/softener assumption: 3 yd needs 10 ml water,
   // and each of the four is dosed at 2x that water figure (20 ml per 10 ml water).
@@ -546,7 +543,6 @@
   });
 
   const waxTopUp = document.getElementById('waxTopUp');
-  const softenerPricePerL = document.getElementById('softenerPricePerL');
   const resetWaxBtn = document.getElementById('resetWax');
 
   const materialSelect = document.getElementById('material');
@@ -569,7 +565,7 @@
   const retailSub = document.getElementById('retailSub');
 
   dyeList.querySelectorAll('.dye-qty').forEach(el => el.addEventListener('input', calculate));
-  [materialSelect, lengthInput, javaQty, javaUrea, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp, softenerPricePerL]
+  [materialSelect, lengthInput, javaQty, javaUrea, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp]
     .forEach(el => el.addEventListener('input', calculate));
   styleJava.addEventListener('change', () => {
     javaQtyWrap.style.display = styleJava.checked ? 'block' : 'none';
@@ -997,7 +993,7 @@
     const chemMl = soapFixChemMl(length);
     const soapCost = (chemMl / 1000) * SOAPING_PRICE_PER_L;
     const fixCost = (chemMl / 1000) * FIXING_PRICE_PER_L;
-    const softenerRsCost = (chemMl / 1000) * (parseFloat(softenerPricePerL.value) || 0);
+    const softenerRsCost = (chemMl / 1000) * SOFTENER_PRICE_PER_L;
 
     return { length, batch, waxCost, utilCost, soapCost, fixCost, softenerRsCost, batchWaterMl };
   }
@@ -1007,9 +1003,9 @@
 
     let sfHtml = '';
     sfHtml += ledStr(`Water — for a ${c.batch} yd batch`, `${c.batchWaterMl.toLocaleString('en-US', { maximumFractionDigits:1 })} ml`);
-    sfHtml += ledStr(`Soaping — ${c.length} of ${c.batch} yd`, fmt(c.soapCost), true);
-    sfHtml += ledStr(`Fixing — ${c.length} of ${c.batch} yd`, fmt(c.fixCost), true);
-    sfHtml += ledStr(`Fabric softener — ${c.length} of ${c.batch} yd`, fmt(c.softenerRsCost), true);
+    sfHtml += ledStr('Soaping', fmt(c.soapCost), true);
+    sfHtml += ledStr('Fixing', fmt(c.fixCost), true);
+    sfHtml += ledStr('Fabric softener', fmt(c.softenerRsCost), true);
     wuSoapFixLedger.innerHTML = sfHtml;
 
     let html = '';
