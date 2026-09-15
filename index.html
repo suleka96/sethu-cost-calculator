@@ -374,14 +374,9 @@
     <div class="form-stack">
 
       <div class="card">
-        <p class="section-eyebrow">Dye</p>
-        <div class="field">
-          <label for="jbDye">Choose dye</label>
-          <select id="jbDye">
-            <option value="">— choose a dye —</option>
-          </select>
-        </div>
-        <p class="note">Per yard: 4 mg urea, 20 ml sodium silicate. Dye follows the sheet's urea&nbsp;:&nbsp;dye = 2&nbsp;:&nbsp;6 ratio — dye is 3&times; the urea weight. Java batik doesn't depend on fabric type — only the yards set above drive these amounts.</p>
+        <p class="section-eyebrow">Shade <span style="font-weight:400; text-transform:none; letter-spacing:0;">— pick a colour, amounts scale to your cloth</span></p>
+        <div class="swatch-grid" id="jbSwatches"></div>
+        <p class="note">Colours are approximate on-screen samples, from the same dye list as water bath. Per yard: 4 mg urea, 20 ml sodium silicate, and dye at the sheet's urea&nbsp;:&nbsp;dye = 2&nbsp;:&nbsp;6 ratio — dye is 3&times; the urea weight. Java batik doesn't depend on fabric type — only the yards set above drive these amounts.</p>
       </div>
 
     </div>
@@ -468,6 +463,17 @@
     ['Red CD', 370], ['Blue CD', 550], ['Orange F2R', 330], ['Green 4B', 480],
     ['Brown', 320], ['Teal Blue G 266%', 380],
   ];
+
+  // Approximate on-screen swatch colours for each individual dye above — used by
+  // Java batik's single-dye picker, which reuses the same dye list as water bath.
+  const DYE_SWATCH = {
+    'Yellow 4GL': '#e6c229', 'Red 3BF': '#c0392b', 'Scarlet 2G': '#e0271c',
+    'Yellow 3RF': '#f1c40f', 'Blue 2GF': '#2e6fd6', 'Red Purple': '#8e2a6b',
+    'Dark Red': '#7a1220', 'Rose 6B': '#d6558a', 'Brill Blue': '#1560d4',
+    'Black': '#1b1b1b', 'Navy Blue GG': '#1b2a52', 'Yellow CD': '#f4d13d',
+    'Red CD': '#b8332f', 'Blue CD': '#3562b0', 'Orange F2R': '#e0762b',
+    'Green 4B': '#3f8f4f', 'Brown': '#6b4226', 'Teal Blue G 266%': '#1c8ca3',
+  };
 
   // Wax is mostly recovered/reused, so this is a suggested per-batch top-up, not a full kg.
   // ~180g net wax per 9yd batch (20g/yd). Sheet groups wax by fabric: Super Voil & Cotton
@@ -872,14 +878,23 @@
   const JAVA_DYE_RATIO = 6;        // urea : dye = 2 : 6, so dye = 3x urea by weight
   const mlfmt = n => n.toLocaleString('en-US', { maximumFractionDigits:1 }) + ' ml';
 
-  const jbDye = document.getElementById('jbDye');
+  const jbSwatches = document.getElementById('jbSwatches');
   const jbLedger = document.getElementById('jbLedger');
 
+  let selectedJavaDye = null;
   DYES.forEach(([name, price]) => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = `${name} — Rs ${price}/100g`;
-    jbDye.appendChild(opt);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'swatch';
+    btn.dataset.id = name;
+    btn.innerHTML = `<span class="chip" style="background:${DYE_SWATCH[name] || '#999'}"></span>
+      <span class="cap"><b>${name}</b><br>Rs ${price}/100g</span>`;
+    btn.addEventListener('click', () => {
+      selectedJavaDye = selectedJavaDye === name ? null : name;
+      jbSwatches.querySelectorAll('.swatch').forEach(s => s.classList.toggle('is-sel', s.dataset.id === selectedJavaDye));
+      calcJava();
+    });
+    jbSwatches.appendChild(btn);
   });
 
   let lastJavaRecipe = null;
@@ -889,7 +904,7 @@
     const silicateMl = yards * JAVA_ML_PER_YARD;
     const ureaMg = yards * JAVA_UREA_MG_PER_YARD;
     const dyeMg = ureaMg * (JAVA_DYE_RATIO / JAVA_UREA_RATIO);
-    const dyeName = jbDye.value;
+    const dyeName = selectedJavaDye;
 
     let html = '';
     html += ledStr('Fabric', `${yards} yd`);
@@ -898,12 +913,11 @@
     html += ledStr(`Urea — ${JAVA_UREA_MG_PER_YARD} mg/yd`, gAmt(ureaMg), true);
     html += dyeName
       ? ledStr(`${dyeName} — urea : dye 2 : 6`, gAmt(dyeMg), true)
-      : ledStr('Dye', 'choose a dye above', true);
+      : ledStr('Dye', 'pick a colour above', true);
     jbLedger.innerHTML = html;
 
     lastJavaRecipe = { yards, waterMl, silicateMl, ureaMg, dyeMg, dyeName };
   }
-  jbDye.addEventListener('input', calcJava);
 
   const jbAddToDesign = document.getElementById('jbAddToDesign');
   const jbAddToDesignNote = document.getElementById('jbAddToDesignNote');
@@ -913,7 +927,7 @@
       return;
     }
     if (!lastJavaRecipe.dyeName) {
-      jbAddToDesignNote.textContent = 'Choose a dye above first.';
+      jbAddToDesignNote.textContent = 'Pick a colour above first.';
       return;
     }
 
