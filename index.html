@@ -215,10 +215,10 @@
           </div>
           <div class="field">
             <label for="length">Fabric used (yards)</label>
-            <input type="number" id="length" min="0" step="0.1" value="2">
+            <input type="number" id="length" min="0" step="0.1" value="2" disabled>
           </div>
         </div>
-        <p class="note">Wax, chemicals, and utility (gas + water) are set up in the <b>Wax &amp; Utility</b> tab, using this yardage — their cost still folds into the total below.</p>
+        <p class="note">Fabric used comes from the yards set on <b>Calculate Recipe</b> — shared between Water bath and Java batik, so it isn't re-entered here. Wax, chemicals, and utility (gas + water) are set up in the <b>Wax &amp; Utility</b> tab, using this same yardage — their cost still folds into the total below.</p>
       </div>
 
       <div class="card">
@@ -305,6 +305,11 @@
         <span>Java batik</span>
       </label>
     </div>
+    <div class="field" style="margin-top:1rem;">
+      <label for="recipeYards">Fabric (yards)</label>
+      <input type="number" id="recipeYards" min="0" step="0.25" value="3">
+    </div>
+    <p class="note">Shared between Water bath and Java batik — it's the same piece of fabric, however it ends up coloured.</p>
   </div>
 
   <div id="dbWaterPanel" class="layout">
@@ -312,7 +317,7 @@
 
       <div class="card">
         <p class="section-eyebrow">Batch &amp; shade</p>
-        <div class="field-row cols-3">
+        <div class="field-row">
           <div class="field">
             <label for="dbFabricType">Fabric type</label>
             <select id="dbFabricType">
@@ -321,10 +326,6 @@
               <option value="Rayon">Rayon</option>
               <option value="Cotton">100% Cotton</option>
             </select>
-          </div>
-          <div class="field">
-            <label for="dbYards">Fabric (yards)</label>
-            <input type="number" id="dbYards" min="0" step="0.25" value="3">
           </div>
           <div class="field">
             <label for="dbDepth">Depth of shade (%)</label>
@@ -380,15 +381,6 @@
     <div class="form-stack">
 
       <div class="card">
-        <p class="section-eyebrow">Fabric</p>
-        <div class="field">
-          <label for="jbYards">Fabric (yards)</label>
-          <input type="number" id="jbYards" min="0" step="0.25" value="3">
-        </div>
-        <p class="note">Java batik doesn't depend on fabric type — only yards drive the amounts here.</p>
-      </div>
-
-      <div class="card">
         <p class="section-eyebrow">Dye</p>
         <div class="field">
           <label for="jbDye">Choose dye</label>
@@ -396,7 +388,7 @@
             <option value="">— choose a dye —</option>
           </select>
         </div>
-        <p class="note">Per yard: 4 mg urea, 20 ml sodium silicate. Dye follows the sheet's urea&nbsp;:&nbsp;dye = 2&nbsp;:&nbsp;6 ratio — dye is 3&times; the urea weight.</p>
+        <p class="note">Per yard: 4 mg urea, 20 ml sodium silicate. Dye follows the sheet's urea&nbsp;:&nbsp;dye = 2&nbsp;:&nbsp;6 ratio — dye is 3&times; the urea weight. Java batik doesn't depend on fabric type — only the yards set above drive these amounts.</p>
       </div>
 
     </div>
@@ -730,8 +722,8 @@
     return `<div class="ledger-row${dim ? ' dim' : ''}"><span class="label">${label}</span><span class="amt">${amountStr}</span></div>`;
   }
 
+  const recipeYards = document.getElementById('recipeYards');
   const dbFabricType = document.getElementById('dbFabricType');
-  const dbYards    = document.getElementById('dbYards');
   const dbDepth    = document.getElementById('dbDepth');
   const dbGPerYard = document.getElementById('dbGPerYard');
   const dbChartBody = document.querySelector('#dbChart tbody');
@@ -766,7 +758,7 @@
   function calcDye(){
     const fabricType = dbFabricType.value;
     const gPerYard = FABRIC_G_PER_YARD[fabricType];
-    const yards  = Math.max(0, parseFloat(dbYards.value) || 0);
+    const yards  = Math.max(0, parseFloat(recipeYards.value) || 0);
     const weight = yards * gPerYard;                                      // grams of cloth, derived
     dbGPerYard.textContent = `${gPerYard.toFixed(1)} g/yd for ${fabricType}`;
 
@@ -817,7 +809,7 @@
     };
   }
 
-  [dbFabricType, dbYards, dbDepth].forEach(el => el.addEventListener('input', calcDye));
+  [dbFabricType, dbDepth].forEach(el => el.addEventListener('input', calcDye));
 
   // Matches a shade recipe's dye name to a Product Cost dye row — names carry an
   // "Intracron " brand prefix and one known spelling difference (Turq/Teal).
@@ -849,7 +841,6 @@
       notes.push(`${lastRecipe.fabricType} isn't priced in Product Cost yet, so material was left as-is`);
     }
 
-    lengthInput.value = lastRecipe.yards;
     styleWater.checked = true;
     styleJava.checked = false;
     javaQtyWrap.style.display = 'none';
@@ -884,7 +875,6 @@
   const JAVA_DYE_RATIO = 6;        // urea : dye = 2 : 6, so dye = 3x urea by weight
   const mlfmt = n => n.toLocaleString('en-US', { maximumFractionDigits:1 }) + ' ml';
 
-  const jbYards = document.getElementById('jbYards');
   const jbDye = document.getElementById('jbDye');
   const jbLedger = document.getElementById('jbLedger');
 
@@ -897,7 +887,7 @@
 
   let lastJavaRecipe = null;
   function calcJava(){
-    const yards = Math.max(0, parseFloat(jbYards.value) || 0);
+    const yards = Math.max(0, parseFloat(recipeYards.value) || 0);
     const silicateMl = yards * JAVA_ML_PER_YARD;
     const ureaMg = yards * JAVA_UREA_MG_PER_YARD;
     const dyeMg = ureaMg * (JAVA_DYE_RATIO / JAVA_UREA_RATIO);
@@ -914,7 +904,7 @@
 
     lastJavaRecipe = { yards, silicateMl, ureaMg, dyeMg, dyeName };
   }
-  [jbYards, jbDye].forEach(el => el.addEventListener('input', calcJava));
+  jbDye.addEventListener('input', calcJava);
 
   const jbAddToDesign = document.getElementById('jbAddToDesign');
   const jbAddToDesignNote = document.getElementById('jbAddToDesignNote');
@@ -928,7 +918,6 @@
       return;
     }
 
-    lengthInput.value = lastJavaRecipe.yards;
     styleJava.checked = true;
     styleWater.checked = false;
     javaQtyWrap.style.display = 'block';
@@ -949,6 +938,16 @@
     Object.entries(tabPanels).forEach(([k, p]) => { p.hidden = k !== 'cost'; });
 
     jbAddToDesignNote.textContent = `Sent to Product Cost: ${lastJavaRecipe.yards} yd, Java batik — ${lastJavaRecipe.dyeName}.`;
+  });
+
+  // One shared yards field drives both Water bath and Java batik, and mirrors straight
+  // into Product Cost's (now read-only) "Fabric used" field — no separate re-entry.
+  lengthInput.value = recipeYards.value;
+  recipeYards.addEventListener('input', () => {
+    lengthInput.value = recipeYards.value;
+    calcDye();
+    calcJava();
+    calculate();
   });
 
   /* ===================== Wax & Utility ===================== */
