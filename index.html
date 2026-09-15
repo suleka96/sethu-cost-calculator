@@ -53,6 +53,10 @@
   }
 
   *{ box-sizing:border-box; }
+  /* Without this, elements whose class also sets `display` (e.g. .layout's grid)
+     stay visually visible when the `hidden` attribute is toggled on them in JS —
+     an author stylesheet rule always beats the browser's default [hidden] rule. */
+  [hidden]{ display:none !important; }
   body{
     background:var(--bg);
     color:var(--ink);
