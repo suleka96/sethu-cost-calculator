@@ -402,9 +402,36 @@
 
   <div id="dbJavaPanel" class="layout" hidden>
     <div class="form-stack">
+
       <div class="card">
-        <p class="section-eyebrow">Java batik</p>
-        <p class="note" style="margin-top:0; border-top:none; padding-top:0;">Recipe calculator for Java batik is coming soon.</p>
+        <p class="section-eyebrow">Fabric</p>
+        <div class="field">
+          <label for="jbYards">Fabric (yards)</label>
+          <input type="number" id="jbYards" min="0" step="0.25" value="3">
+        </div>
+        <p class="note">Java batik doesn't depend on fabric type — only yards drive the amounts here.</p>
+      </div>
+
+      <div class="card">
+        <p class="section-eyebrow">Dye</p>
+        <div class="field">
+          <label for="jbDye">Choose dye</label>
+          <select id="jbDye">
+            <option value="">— choose a dye —</option>
+          </select>
+        </div>
+        <p class="note">Per yard: 4 mg urea, 20 ml sodium silicate. Dye follows the sheet's urea&nbsp;:&nbsp;dye = 2&nbsp;:&nbsp;6 ratio — dye is 3&times; the urea weight.</p>
+      </div>
+
+    </div>
+
+    <div class="summary">
+      <div class="card">
+        <p class="section-eyebrow">Recipe</p>
+        <div id="jbLedger"></div>
+
+        <button type="button" class="cta-btn" id="jbAddToDesign">Add to design →</button>
+        <p class="note" id="jbAddToDesignNote" style="margin-top:0.6rem;"></p>
       </div>
     </div>
   </div>
@@ -781,6 +808,74 @@
     dbAddToDesignNote.textContent = notes.length ? `${summary} (${notes.join('; ')})` : summary;
   });
 
+  /* ===================== Java batik ===================== */
+  const JAVA_ML_PER_YARD = 20;    // sodium silicate, ml per yard
+  const JAVA_UREA_MG_PER_YARD = 4; // urea, mg per yard
+  const JAVA_UREA_RATIO = 2;
+  const JAVA_DYE_RATIO = 6;        // urea : dye = 2 : 6, so dye = 3x urea by weight
+  const mlfmt = n => n.toLocaleString('en-US', { maximumFractionDigits:1 }) + ' ml';
+
+  const jbYards = document.getElementById('jbYards');
+  const jbDye = document.getElementById('jbDye');
+  const jbLedger = document.getElementById('jbLedger');
+
+  DYES.forEach(([name, price]) => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = `${name} — Rs ${price}/100mg`;
+    jbDye.appendChild(opt);
+  });
+
+  let lastJavaRecipe = null;
+  function calcJava(){
+    const yards = Math.max(0, parseFloat(jbYards.value) || 0);
+    const silicateMl = yards * JAVA_ML_PER_YARD;
+    const ureaMg = yards * JAVA_UREA_MG_PER_YARD;
+    const dyeMg = ureaMg * (JAVA_DYE_RATIO / JAVA_UREA_RATIO);
+    const dyeName = jbDye.value;
+
+    let html = '';
+    html += ledStr('Fabric', `${yards} yd`);
+    html += ledStr(`Sodium silicate — ${JAVA_ML_PER_YARD} ml/yd`, mlfmt(silicateMl));
+    html += ledStr(`Urea — ${JAVA_UREA_MG_PER_YARD} mg/yd`, mgAmt(ureaMg), true);
+    html += dyeName
+      ? ledStr(`${dyeName} — urea : dye 2 : 6`, mgAmt(dyeMg), true)
+      : ledStr('Dye', 'choose a dye above', true);
+    jbLedger.innerHTML = html;
+
+    lastJavaRecipe = { yards, silicateMl, ureaMg, dyeMg, dyeName };
+  }
+  [jbYards, jbDye].forEach(el => el.addEventListener('input', calcJava));
+
+  const jbAddToDesign = document.getElementById('jbAddToDesign');
+  const jbAddToDesignNote = document.getElementById('jbAddToDesignNote');
+  jbAddToDesign.addEventListener('click', () => {
+    if (!lastJavaRecipe || lastJavaRecipe.yards <= 0) {
+      jbAddToDesignNote.textContent = 'Set the yards above first.';
+      return;
+    }
+    if (!lastJavaRecipe.dyeName) {
+      jbAddToDesignNote.textContent = 'Choose a dye above first.';
+      return;
+    }
+
+    lengthInput.value = lastJavaRecipe.yards;
+    styleJava.checked = true;
+    styleWater.checked = false;
+    javaQtyWrap.style.display = 'block';
+    javaQty.value = Math.round(lastJavaRecipe.silicateMl * 10) / 10;
+    javaUrea.value = Math.round((lastJavaRecipe.ureaMg / 1000) * 1000) / 1000;
+
+    const dyeInput = [...dyeList.querySelectorAll('.dye-qty')].find(el => el.dataset.name === lastJavaRecipe.dyeName);
+    if (dyeInput) dyeInput.value = Math.round(lastJavaRecipe.dyeMg);
+
+    calculate();
+    tabBtns.forEach(b => b.classList.toggle('is-active', b.dataset.tab === 'cost'));
+    Object.entries(tabPanels).forEach(([k, p]) => { p.hidden = k !== 'cost'; });
+
+    jbAddToDesignNote.textContent = `Sent to Product Cost: ${lastJavaRecipe.yards} yd, Java batik — ${lastJavaRecipe.dyeName}.`;
+  });
+
   /* ===================== Tab switching ===================== */
   const tabBtns = document.querySelectorAll('.tab-btn');
   const tabPanels = {
@@ -795,6 +890,7 @@
   });
 
   calcDye();
+  calcJava();
 </script>
 </body>
 </html>
