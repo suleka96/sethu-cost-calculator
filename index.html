@@ -227,35 +227,9 @@
     <div class="form-stack">
 
       <div class="card">
-        <p class="section-eyebrow">Material &amp; fabric</p>
-        <div class="field">
-          <label for="length">Fabric used (yards)</label>
-          <input type="number" id="length" min="0" step="0.1" value="2" disabled>
-        </div>
-        <p class="note">Material and fabric used come from the fabric type and yards set above / on <b>Calculate Recipe</b> — not re-entered here. Wax, chemicals, and utility (gas + water) are set up in the <b>Wax &amp; Utility</b> tab, using this same yardage — their cost still folds into the total below.</p>
-      </div>
-
-      <div class="card">
-        <p class="section-eyebrow">Coloring style <span style="font-weight:400; text-transform:none; letter-spacing:0;">— a piece can use either or both</span></p>
-        <div class="checkbox-row"><input type="checkbox" id="styleWater" checked><label for="styleWater">Water bath</label></div>
-        <div class="checkbox-row"><input type="checkbox" id="styleJava"><label for="styleJava">Java style</label></div>
-        <div id="javaQtyWrap" style="margin-top:0.9rem; display:none;">
-          <div class="field-row">
-            <div class="field">
-              <label for="javaQty">Sodium silicate used (ml) — Rs 500/L</label>
-              <input type="number" id="javaQty" min="0" step="10" value="200">
-            </div>
-            <div class="field">
-              <label for="javaUrea">Urea used (g) — Rs 400/kg</label>
-              <input type="number" id="javaUrea" min="0" step="5" value="0">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <p class="section-eyebrow">Dyes used <span style="font-weight:400; text-transform:none; letter-spacing:0;">— enter mg used, priced per 100g</span></p>
-        <div class="qty-list" id="dyeList"></div>
+        <p class="section-eyebrow">Coloring style <span style="font-weight:400; text-transform:none; letter-spacing:0;">— from Calculate Recipe's "Add to design"</span></p>
+        <div id="coloringStyleSummary"></div>
+        <p class="note">Every "Add to design" click on Calculate Recipe — Water bath or Java batik — logs one session here with its dyes and chemicals. Nothing to fill in; dye and coloring costs below come straight from these.</p>
       </div>
 
       <div class="card">
@@ -522,10 +496,6 @@
   const PACKAGING = { bag: 175, label: 25 };
   const UTILITY_PER_BATCH = 500 + 60; // gas + water
 
-  // Remembered from the last "Add to design" click (either Water bath or Java batik) —
-  // lets Wax & Utility's dye-bath chemicals use real recipe numbers instead of asking again.
-  let lastDesign = null;
-
   // Remembered from the last "Add To Cost" click on Wax & Utility — Product Cost's total
   // only reflects this committed snapshot, not whatever's currently in the Wax & Utility
   // tab's fields (mirrors how "Add to design" works for Calculate Recipe).
@@ -538,16 +508,31 @@
   const lsGet = (key, fallback) => { try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v); } catch { return fallback; } };
   const lsSet = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} };
 
+  // One entry per "Add to design" click — Water bath sessions carry their own dyes and
+  // salt/caustic/acetic; Java batik sessions carry their dye, silicate and urea. Product
+  // Cost's coloring cost is the sum across every session of each kind, not a single
+  // snapshot. Persisted per browser; cleared when a new product session starts.
+  let waterBathSessions = lsGet('sethuWaterSessions', []);
+  let javaBatikSessions = lsGet('sethuJavaSessions', []);
+
   const fmt = n => 'Rs ' + Math.round(n).toLocaleString('en-US');
 
-  const dyeList = document.getElementById('dyeList');
-  DYES.forEach(([name, price], i) => {
-    const row = document.createElement('div');
-    row.className = 'qty-row';
-    row.innerHTML = `<div class="name">${name}<small>Rs ${price} / 100g</small></div>
-      <input type="number" class="dye-qty" data-name="${name}" data-price="${price}" min="0" step="10" value="0">`;
-    dyeList.appendChild(row);
-  });
+  // Matches a shade recipe's dye name to a Product Cost price — names carry an
+  // "Intracron " brand prefix and one known spelling difference (Turq/Teal).
+  const DYE_PRICE = Object.fromEntries(DYES);
+  function resolveDyePrice(rawName){
+    const clean = rawName.replace(/^Intracron\s+/i, '').trim().toLowerCase();
+    const candidates = [clean, clean.replace(/turq/, 'teal'), clean.replace(/teal/, 'turq')];
+    for (const c of candidates) {
+      const hit = Object.keys(DYE_PRICE).find(n => n.toLowerCase() === c);
+      if (hit) return DYE_PRICE[hit];
+    }
+    return null;
+  }
+  const dyeCostFor = (rawName, mg) => {
+    const price = resolveDyePrice(rawName);
+    return price != null ? (mg / 100000) * price : 0; // price is per 100g (100,000 mg)
+  };
 
   const waxTopUp = document.getElementById('waxTopUp');
   const resetWaxBtn = document.getElementById('resetWax');
@@ -556,12 +541,7 @@
   const productRef = document.getElementById('productRef');
   const newProductBtn = document.getElementById('newProductBtn');
   const viscoseWarning = document.getElementById('viscoseWarning');
-  const lengthInput = document.getElementById('length');
-  const styleWater = document.getElementById('styleWater');
-  const styleJava = document.getElementById('styleJava');
-  const javaQtyWrap = document.getElementById('javaQtyWrap');
-  const javaQty = document.getElementById('javaQty');
-  const javaUrea = document.getElementById('javaUrea');
+  const coloringStyleSummary = document.getElementById('coloringStyleSummary');
   const designSelect = document.getElementById('design');
   const pkgBag = document.getElementById('pkgBag');
   const pkgLabel = document.getElementById('pkgLabel');
@@ -574,14 +554,8 @@
   const retailPrice = document.getElementById('retailPrice');
   const retailSub = document.getElementById('retailSub');
 
-  dyeList.querySelectorAll('.dye-qty').forEach(el => el.addEventListener('input', calculate));
-  [lengthInput, javaQty, javaUrea, designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp]
+  [designSelect, pkgBag, pkgLabel, batchSize, marginInput, waxTopUp]
     .forEach(el => el.addEventListener('input', calculate));
-  styleJava.addEventListener('change', () => {
-    javaQtyWrap.style.display = styleJava.checked ? 'block' : 'none';
-    calculate();
-  });
-  styleWater.addEventListener('change', calculate);
 
   resetMarginBtn.addEventListener('click', () => {
     marginInput.value = DEFAULT_MARGIN[globalFabricType.value] || 0;
@@ -597,32 +571,44 @@
     return `<div class="ledger-row${dim ? ' dim' : ''}"><span class="label">${label}</span><span class="amt">${fmt(amount)}</span></div>`;
   }
 
+  function renderColoringStyle(){
+    const waterLabel = waterBathSessions.length === 1 ? '1 session' : `${waterBathSessions.length} sessions`;
+    const javaLabel = javaBatikSessions.length === 1 ? '1 session' : `${javaBatikSessions.length} sessions`;
+    let html = '';
+    html += ledStr('Water bath', waterBathSessions.length ? waterLabel : 'none yet');
+    html += ledStr('Java batik', javaBatikSessions.length ? javaLabel : 'none yet', true);
+    coloringStyleSummary.innerHTML = html;
+  }
+
   function calculate(){
     const material = globalFabricType.value;
-    const length = Math.max(0, parseFloat(lengthInput.value) || 0);
+    const length = Math.max(0, parseFloat(recipeYards.value) || 0);
     const materialCost = (MATERIALS[material] || 0) * length;
 
-    let dyeCost = 0;
-    dyeList.querySelectorAll('.dye-qty').forEach(el => {
-      const mgUsed = parseFloat(el.value) || 0;
-      dyeCost += (mgUsed / 100000) * parseFloat(el.dataset.price); // price is per 100g (100,000 mg)
+    // Water bath: sum dyes + salt/caustic/acetic across every "Add to design" session.
+    let waterDyeCost = 0, waterChemCost = 0;
+    waterBathSessions.forEach(s => {
+      s.dyes.forEach(([name, mg]) => { waterDyeCost += dyeCostFor(name, mg); });
+      waterChemCost += (s.saltG / 1000) * SALT_PRICE_PER_KG
+                     + (s.causticG / 1000) * CAUSTIC_PRICE_PER_KG
+                     + (s.aceticG / 1000) * ACETIC_PRICE_PER_KG;
     });
+    const waterBathCost = waterDyeCost + waterChemCost;
 
-    const usesJava = styleJava.checked;
-    const usesWater = styleWater.checked;
-    const silicateCost = usesJava ? ((parseFloat(javaQty.value) || 0) / 1000) * JAVA_PRICE : 0;   // ml -> L
-    const ureaCost = usesJava ? ((parseFloat(javaUrea.value) || 0) / 1000) * UREA_PRICE : 0;       // g -> kg
-    const javaCost = silicateCost + ureaCost;
-    const styleLabel = usesWater && usesJava ? 'Water bath + Java'
-      : usesJava ? 'Java style' : usesWater ? 'Water bath' : 'No coloring style selected';
-
-    const recipeChem = chemCostFromDesign();
-    const chemCost = recipeChem ? recipeChem.cost : 0;   // exact from recipe, no batch scaling
+    // Java batik: sum dye + sodium silicate/urea across every "Add to design" session.
+    let javaDyeCost = 0, javaChemCost = 0;
+    javaBatikSessions.forEach(s => {
+      javaDyeCost += dyeCostFor(s.dyeName, s.dyeMg);
+      javaChemCost += (s.silicateMl / 1000) * JAVA_PRICE + (s.ureaMg / 1000000) * UREA_PRICE; // ureaMg: mg -> kg
+    });
+    const javaBatikCost = javaDyeCost + javaChemCost;
 
     // Wax, utility, soaping, fixing and fabric softener only count once "Add To Cost"
     // has been clicked on the Wax & Utility tab — lastWaxUtil is that committed snapshot.
     const { waxCost, utilCost, soapCost, fixCost, softenerRsCost } = lastWaxUtil;
-    const elementCost = waxCost + soapCost + fixCost + softenerRsCost + chemCost;
+    const waxUtilCost = waxCost + utilCost + soapCost + fixCost + softenerRsCost;
+
+    const coloringCost = waterBathCost + javaBatikCost;
 
     const sewingCost = designSelect.value === 'none' ? 0 : SEWING[designSelect.value];
 
@@ -630,21 +616,17 @@
     if (pkgBag.checked) pkgCost += PACKAGING.bag;
     if (pkgLabel.checked) pkgCost += PACKAGING.label;
 
-    const totalCost = materialCost + dyeCost + elementCost + javaCost + utilCost + sewingCost + pkgCost;
+    const totalCost = materialCost + coloringCost + waxUtilCost + sewingCost + pkgCost;
+
+    renderColoringStyle();
 
     let html = '';
     html += row(`${material} (${length} yd)`, materialCost);
-    html += row('Dyes', dyeCost);
-    html += row('Wax top‑up', waxCost, true);
-    html += row('Dye‑bath chemicals', chemCost, true);
-    html += row('Soaping', soapCost, true);
-    html += row('Fixing', fixCost, true);
-    html += row('Fabric softener', softenerRsCost, true);
-    if (usesJava) {
-      html += row('Java — sodium silicate', silicateCost, true);
-      html += row('Java — urea', ureaCost, true);
-    }
-    html += row(`Utility (gas + water)`, utilCost, true);
+    html += '<div class="ledger-divider"></div>';
+    html += row(`Water bath — ${waterBathSessions.length} session${waterBathSessions.length === 1 ? '' : 's'}`, waterBathCost);
+    html += row(`Java batik — ${javaBatikSessions.length} session${javaBatikSessions.length === 1 ? '' : 's'}`, javaBatikCost);
+    html += row('Wax &amp; utility', waxUtilCost);
+    html += `<div class="ledger-total"><span>Coloring + wax &amp; utility</span><span class="amt">${fmt(coloringCost + waxUtilCost)}</span></div>`;
     html += row(designSelect.value === 'none' ? 'Sewing (none)' : `Sewing — ${designSelect.value}`, sewingCost);
     html += row('Packaging', pkgCost, true);
     html += '<div class="ledger-divider"></div>';
@@ -671,7 +653,6 @@
 
   let lastCostSummary = null;
 
-  javaQtyWrap.style.display = 'none';
   marginInput.value = DEFAULT_MARGIN[globalFabricType.value] || 0;
   waxTopUp.value = DEFAULT_WAX_TOPUP[globalFabricType.value] || 0;
 
@@ -830,18 +811,6 @@
 
   dbDepth.addEventListener('input', calcDye);
 
-  // Matches a shade recipe's dye name to a Product Cost dye row — names carry an
-  // "Intracron " brand prefix and one known spelling difference (Turq/Teal).
-  function resolveDyeInput(recipeDyeName){
-    const clean = recipeDyeName.replace(/^Intracron\s+/i, '').trim().toLowerCase();
-    const candidates = [clean, clean.replace(/turq/, 'teal'), clean.replace(/teal/, 'turq')];
-    for (const c of candidates) {
-      const input = [...dyeList.querySelectorAll('.dye-qty')].find(el => el.dataset.name.toLowerCase() === c);
-      if (input) return input;
-    }
-    return null;
-  }
-
   let lastRecipe = null;
   const dbAddToDesign = document.getElementById('dbAddToDesign');
   const dbAddToDesignNote = document.getElementById('dbAddToDesignNote');
@@ -852,35 +821,23 @@
     }
 
     const notes = [];
-
     if (MATERIALS[lastRecipe.fabricType] == null) {
       notes.push(`${lastRecipe.fabricType} isn't priced in Product Cost yet`);
     }
 
-    styleWater.checked = true;
-    styleJava.checked = false;
-    javaQtyWrap.style.display = 'none';
-
-    let matched = 0;
-    const unmatched = [];
-    lastRecipe.dyes.forEach(([name, mg]) => {
-      const input = resolveDyeInput(name);
-      if (input) { input.value = Math.round(mg); matched++; }
-      else unmatched.push(name);
+    // Log this as one more water bath session — doesn't replace earlier ones, since
+    // the same piece of fabric may go through water bath more than once.
+    waterBathSessions.push({
+      yards: lastRecipe.yards, dyes: lastRecipe.dyes,
+      saltG: lastRecipe.saltG, causticG: lastRecipe.causticG, aceticG: lastRecipe.aceticG,
     });
-    if (unmatched.length) notes.push(`no Product Cost match for ${unmatched.join(', ')}`);
-
-    lastDesign = {
-      method: 'water',
-      fabricType: lastRecipe.fabricType, yards: lastRecipe.yards, weightG: lastRecipe.weight,
-      waterL: lastRecipe.water, saltG: lastRecipe.saltG, causticG: lastRecipe.causticG, aceticG: lastRecipe.aceticG,
-    };
+    lsSet('sethuWaterSessions', waterBathSessions);
 
     calculate();
     tabBtns.forEach(b => b.classList.toggle('is-active', b.dataset.tab === 'cost'));
     Object.entries(tabPanels).forEach(([k, p]) => { p.hidden = k !== 'cost'; });
 
-    const summary = `Sent to Product Cost: ${lastRecipe.fabricType}, ${lastRecipe.yards} yd${matched ? `, ${matched} dye${matched > 1 ? 's' : ''}` : ''}.`;
+    const summary = `Logged water bath session ${waterBathSessions.length}: ${lastRecipe.fabricType}, ${lastRecipe.yards} yd, ${lastRecipe.dyes.length} dye${lastRecipe.dyes.length === 1 ? '' : 's'}.`;
     dbAddToDesignNote.textContent = notes.length ? `${summary} (${notes.join('; ')})` : summary;
   });
 
@@ -937,33 +894,24 @@
       return;
     }
 
-    styleJava.checked = true;
-    styleWater.checked = false;
-    javaQtyWrap.style.display = 'block';
-    javaQty.value = Math.round(lastJavaRecipe.silicateMl * 10) / 10;
-    javaUrea.value = Math.round((lastJavaRecipe.ureaMg / 1000) * 1000) / 1000;
-
-    const dyeInput = [...dyeList.querySelectorAll('.dye-qty')].find(el => el.dataset.name === lastJavaRecipe.dyeName);
-    if (dyeInput) dyeInput.value = Math.round(lastJavaRecipe.dyeMg);
-
-    lastDesign = {
-      method: 'java',
-      fabricType: null, yards: lastJavaRecipe.yards, weightG: null,
-      waterL: null, saltG: 0, causticG: 0, aceticG: 0,
-    };
+    // Log this as one more Java batik session — doesn't replace earlier ones, since
+    // the same piece of fabric may go through Java batik more than once.
+    javaBatikSessions.push({
+      yards: lastJavaRecipe.yards, silicateMl: lastJavaRecipe.silicateMl,
+      ureaMg: lastJavaRecipe.ureaMg, dyeName: lastJavaRecipe.dyeName, dyeMg: lastJavaRecipe.dyeMg,
+    });
+    lsSet('sethuJavaSessions', javaBatikSessions);
 
     calculate();
     tabBtns.forEach(b => b.classList.toggle('is-active', b.dataset.tab === 'cost'));
     Object.entries(tabPanels).forEach(([k, p]) => { p.hidden = k !== 'cost'; });
 
-    jbAddToDesignNote.textContent = `Sent to Product Cost: ${lastJavaRecipe.yards} yd, Java batik — ${lastJavaRecipe.dyeName}.`;
+    jbAddToDesignNote.textContent = `Logged Java batik session ${javaBatikSessions.length}: ${lastJavaRecipe.yards} yd, ${lastJavaRecipe.dyeName}.`;
   });
 
-  // One shared yards field drives both Water bath and Java batik, and mirrors straight
-  // into Product Cost's (now read-only) "Fabric used" field — no separate re-entry.
-  lengthInput.value = recipeYards.value;
+  // One shared yards field drives both Water bath and Java batik, and Product Cost /
+  // Wax & Utility read it directly too — no separate re-entry anywhere.
   recipeYards.addEventListener('input', () => {
-    lengthInput.value = recipeYards.value;
     calcDye();
     calcJava();
     calculate();
@@ -971,18 +919,6 @@
 
   /* ===================== Wax & Utility ===================== */
   const wuLedger = document.getElementById('wuLedger');
-
-  // Salt/caustic/acetic from the dye bath itself are precise for this exact piece
-  // already (Calculate Recipe's water bath knows the litres used) — kept as its own
-  // Product Cost row, separate from Wax & Utility's batch-level costs above.
-  function chemCostFromDesign(){
-    if (!lastDesign || lastDesign.method !== 'water' || !lastDesign.yards) return null;
-    const cost = (lastDesign.saltG / 1000) * SALT_PRICE_PER_KG
-               + (lastDesign.causticG / 1000) * CAUSTIC_PRICE_PER_KG
-               + (lastDesign.aceticG / 1000) * ACETIC_PRICE_PER_KG;
-    return { cost, yards: lastDesign.yards };
-  }
-
   const wuSoapFixLedger = document.getElementById('wuSoapFixLedger');
   const wuAddToCost = document.getElementById('wuAddToCost');
   const wuAddToCostNote = document.getElementById('wuAddToCostNote');
@@ -991,7 +927,7 @@
   // total only reflects the last committed snapshot, the same way Calculate Recipe's
   // "Add to design" works.
   function computeWaxUtilCosts(){
-    const length = Math.max(0, parseFloat(lengthInput.value) || 0);
+    const length = Math.max(0, parseFloat(recipeYards.value) || 0);
     const batch = Math.max(1, parseFloat(batchSize.value) || 9);
     const waxCost = ((parseFloat(waxTopUp.value) || 0) / batch) * length;
     const perYardUtil = UTILITY_PER_BATCH / batch;
@@ -1059,10 +995,17 @@
 
   // Changing fabric type always mints a fresh reference — it's a new piece of fabric,
   // i.e. a new session. "New product" forces a fresh one for the same fabric type.
+  // Either way, a fresh reference means a fresh piece — the old one's coloring
+  // sessions and wax/utility cost don't carry over.
   function ensureSession(forceNew){
     const material = globalFabricType.value;
     if (forceNew || !session || session.material !== material) {
       session = { material, ref: mintRef(material) };
+      waterBathSessions = [];
+      javaBatikSessions = [];
+      lastWaxUtil = { waxCost: 0, utilCost: 0, soapCost: 0, fixCost: 0, softenerRsCost: 0 };
+      lsSet('sethuWaterSessions', waterBathSessions);
+      lsSet('sethuJavaSessions', javaBatikSessions);
     }
     lsSet('sethuSession', session);
     productRef.textContent = session.ref;
@@ -1086,7 +1029,7 @@
     calcDye();
     calculate();
   });
-  newProductBtn.addEventListener('click', () => ensureSession(true));
+  newProductBtn.addEventListener('click', () => { ensureSession(true); calculate(); });
 
   /* ===================== Saved products log ===================== */
   const productLogBody = document.getElementById('productLogBody');
